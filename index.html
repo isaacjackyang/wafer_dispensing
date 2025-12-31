@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晶圓/矩形 點膠系統 (含統計數據)</title>
+    <style>
+        :root { --primary: #007ACC; --panel: #fff; --bg: #f4f7f6; }
+        body { font-family: "Segoe UI", sans-serif; background: var(--bg); padding: 20px; display: flex; flex-direction: column; align-items: center; margin: 0; }
+        
+        h2 { margin-bottom: 20px; color: #333; }
+
+        .container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; max-width: 1400px; width: 100%; }
+
+        /* 左側設定區 */
+        .sidebar { 
+            flex: 1; min-width: 350px; background: var(--panel); padding: 20px; 
+            border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: fit-content;
+        }
+
+        .section-title { 
+            font-size: 16px; font-weight: bold; color: #444; border-bottom: 2px solid #eee; 
+            padding-bottom: 5px; margin-top: 20px; margin-bottom: 10px; 
+        }
+        .section-title:first-child { margin-top: 0; }
+
+        .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .input-row label { font-size: 14px; color: #555; font-weight: 500; }
+        .input-row input[type="number"] { 
+            width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; 
+            text-align: right; font-family: monospace; 
+        }
+        
+        /* 模式選擇 */
+        .mode-switch { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 6px; }
+        .mode-label { 
+            flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 13px; color: #666;
+            transition: 0.2s;
+        }
+        .mode-label:hover { background: #ddd; }
+        input[type="radio"] { display: none; }
+        input[type="radio"]:checked + .mode-label { background: var(--primary); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* 顯示控制 */
+        .visibility-controls { display: flex; gap: 15px; margin: 10px 0; font-size: 14px; }
+        .visibility-controls label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+        /* 按鈕群組 */
+        .btn-group { display: flex; gap: 10px; margin-top: 25px; }
+        button { 
+            flex: 1; padding: 10px; border: none; border-radius: 4px; cursor: pointer; 
+            font-weight: bold; transition: 0.2s; 
+        }
+        .btn-refresh { background: #333; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-blue { background: var(--primary); color: white; }
+        button:hover { opacity: 0.9; }
+
+        /* 右側畫布 */
+        .canvas-container { 
+            flex: 2; min-width: 500px; background: white; padding: 20px; 
+            border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; align-items: center;
+        }
+        svg { border: 1px solid #ddd; background: #fff; max-width: 100%; height: auto; }
+
+        .legend { display: flex; gap: 15px; margin-top: 10px; font-size: 12px; color: #666; flex-wrap: wrap; justify-content: center; }
+        .leg-item { display: flex; align-items: center; gap: 5px; }
+        .color-box { width: 15px; height: 15px; border-radius: 3px; }
+        .line-demo { width: 25px; height: 3px; }
+
+        .status-box { 
+            margin-top: 15px; padding: 10px; background: #eef7fe; color: #005fa3; 
+            border-left: 4px solid var(--primary); font-size: 13px; width: 90%;
+        }
+        
+        .info-note { font-size: 12px; color: #888; margin-bottom: 5px; font-style: italic;}
+
+        /* 統計區塊樣式 */
+        .stats-panel {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            border-radius: 6px;
+        }
+        .stats-title { font-size: 14px; font-weight: bold; color: #2e7d32; margin-bottom: 8px; border-bottom: 1px dashed #a5d6a7; padding-bottom: 4px;}
+        .stat-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; color: #333; }
+        .stat-val { font-weight: bold; font-family: monospace; font-size: 15px;}
+
+        /* 根據模式隱藏不需要的輸入框 */
+        .group-wafer, .group-rect, .group-zigzag { display: none; }
+        .mode-wafer-active .group-wafer { display: block; }
+        .mode-rect-active .group-rect { display: block; }
+        .mode-zigzag-active .group-zigzag { display: block; }
+        
+        .start-flag-row { background: #ffebee; border-left: 3px solid #f44336; padding-left: 5px; }
+
+    </style>
+</head>
+<body class="mode-wafer-active">
+
+    <h2>晶圓/矩形 Flag 2 點膠系統</h2>
+
+    <div class="container">
+        <div class="sidebar">
+            
+            <div class="mode-switch">
+                <input type="radio" name="mode" id="m_wafer" checked onchange="setMode('wafer')">
+                <label for="m_wafer" class="mode-label">晶圓 (Wafer)</label>
+                
+                <input type="radio" name="mode" id="m_rect" onchange="setMode('rect')">
+                <label for="m_rect" class="mode-label">矩形 (Rect)</label>
+
+                <input type="radio" name="mode" id="m_zigzag" onchange="setMode('zigzag')">
+                <label for="m_zigzag" class="mode-label">Z字形 (Zig)</label>
+            </div>
+
+            <div class="section-title">視覺設定</div>
+            <div class="input-row">
+                <label>SVG 線條粗細 (mm):</label>
+                <input type="number" id="v_stroke" value="0.05" step="0.01" min="0.01">
+            </div>
+            <div class="visibility-controls group-wafer">
+                <label><input type="checkbox" id="v_show_grid" checked> 顯示晶片網格</label>
+            </div>
+
+            <div class="group-wafer">
+                <div class="section-title">1. 晶圓幾何</div>
+                <div class="input-row"><label>直徑 (inch):</label><input type="number" id="w_dia" value="8.0"></div>
+                <div class="input-row"><label>邊緣內縮 (mm):</label><input type="number" id="w_margin" value="5.0"></div>
+                
+                <div class="section-title">2. 晶片網格</div>
+                <div class="input-row"><label>寬度 X (mm):</label><input type="number" id="d_w" value="1.645"></div>
+                <div class="input-row"><label>高度 Y (mm):</label><input type="number" id="d_h" value="0.945"></div>
+                <div class="input-row"><label>切割道 Scribe:</label><input type="number" id="d_scribe" value="0.055"></div>
+
+                <div class="stats-panel">
+                    <div class="stats-title">晶圓統計結果</div>
+                    <div class="stat-row"><span>總完整顆數:</span> <span class="stat-val" id="stat_total">0</span></div>
+                    <div class="stat-row"><span>X軸最大顆數:</span> <span class="stat-val" id="stat_maxX">0</span></div>
+                    <div class="stat-row"><span>Y軸最大顆數:</span> <span class="stat-val" id="stat_maxY">0</span></div>
+                </div>
+
+                <div class="section-title">3. 短線段設定</div>
+                <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="w_start_f" value="2"></div>
+                <div class="input-row"><label>線段長度 Len:</label><input type="number" id="w_seg_len" value="0.4"></div>
+                <div class="input-row"><label>X軸間距 Pitch:</label><input type="number" id="w_seg_pitch" value="1.7"></div>
+                <div class="info-note">Y軸間距 = 晶片高 + 切割道<br>每行首點Flag=2</div>
+            </div>
+
+            <div class="group-rect">
+                <div class="section-title">矩形範圍</div>
+                <div class="input-row"><label>矩形寬度 W:</label><input type="number" id="r_w" value="50.0"></div>
+                <div class="input-row"><label>矩形高度 H:</label><input type="number" id="r_h" value="50.0"></div>
+                
+                <div class="section-title">短線段設定</div>
+                <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="r_start_f" value="2"></div>
+                <div class="input-row"><label>線段長度 Len:</label><input type="number" id="r_seg_len" value="0.4"></div>
+                <div class="input-row"><label>X軸間距 Pitch:</label><input type="number" id="r_pitch_x" value="1.7"></div>
+                <div class="input-row"><label>Y軸間距 Pitch:</label><input type="number" id="r_pitch_y" value="1.7"></div>
+                <div class="info-note">每行首點Flag=2</div>
+            </div>
+
+            <div class="group-zigzag">
+                <div class="section-title">Z字形路徑</div>
+                <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="z_start_f" value="2"></div>
+                <div class="input-row"><label>X 總長 (mm):</label><input type="number" id="z_maxx" value="100.0"></div>
+                <div class="input-row"><label>Y 總長 (mm):</label><input type="number" id="z_maxy" value="100.0"></div>
+                <div class="input-row"><label>噴膠深度 Drop:</label><input type="number" id="z_drop" value="0.4"></div>
+                <div class="input-row"><label>水平間距 Step:</label><input type="number" id="z_step" value="1.0"></div>
+                <div class="input-row"><label>換行間距 Row:</label><input type="number" id="z_row" value="1.7"></div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-refresh" onclick="render()">更新預覽 (Refresh)</button>
+            </div>
+            <div class="btn-group">
+                <button class="btn-blue" onclick="downloadSVG()">下載 SVG</button>
+                <button class="btn-green" onclick="downloadCSV()">下載 CSV</button>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <svg id="svgCanvas" width="650" height="650" viewBox="-110 -110 220 220"></svg>
+            <div class="legend" id="legend-area"></div>
+            <div class="status-box" id="status-text">準備就緒</div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'wafer';
+        let csvData = []; 
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.body.className = `mode-${mode}-active`;
+            render();
+        }
+
+        function getVal(id, defaultVal = 0) {
+            const el = document.getElementById(id);
+            if (!el) return defaultVal;
+            const v = parseFloat(el.value);
+            return isNaN(v) ? defaultVal : v;
+        }
+
+        function render() {
+            try {
+                const svg = document.getElementById('svgCanvas');
+                svg.innerHTML = ''; 
+                
+                const strokeWidth = getVal('v_stroke', 0.1);
+
+                if (currentMode === 'wafer') {
+                    drawWaferMode(svg, strokeWidth);
+                    updateLegend('wafer');
+                } else if (currentMode === 'rect') {
+                    drawRectMode(svg, strokeWidth);
+                    updateLegend('rect');
+                } else {
+                    drawZigzagMode(svg, strokeWidth);
+                    updateLegend('zigzag');
+                }
+                
+                const statusBox = document.getElementById('status-text');
+                statusBox.style.color = "#005fa3";
+                statusBox.style.borderLeftColor = "#007ACC";
+
+            } catch (err) {
+                console.error(err);
+                const statusBox = document.getElementById('status-text');
+                statusBox.innerText = "錯誤: " + err.message + " (請檢查輸入數值)";
+                statusBox.style.color = "red";
+                statusBox.style.borderLeftColor = "red";
+            }
+        }
+
+        function updateLegend(mode) {
+            const el = document.getElementById('legend-area');
+            let html = `<div class="leg-item"><div class="line-demo" style="background:#aaa; height:1px;"></div> 座標軸 (0,0)</div>`;
+            
+            html += `<div class="leg-item"><div class="line-demo" style="border-top:2px dotted red;"></div> F2 (Jump/Row Start)</div>`;
+            html += `<div class="leg-item"><div class="line-demo" style="background:#00c853;"></div> F1 (Disp)</div>`;
+            if (mode === 'zigzag') {
+                 html += `<div class="leg-item"><div class="line-demo" style="border-top:2px dashed #999;"></div> F0 (Move)</div>`;
+            }
+            if (mode === 'wafer') {
+                html += `<div class="leg-item"><div class="color-box" style="background:#e3f2fd; border:1px solid #2196f3;"></div> 晶片格</div>`;
+            }
+            el.innerHTML = html;
+        }
+
+        // --- 1. 晶圓模式 (Wafer) ---
+        function drawWaferMode(svg, baseStroke) {
+            const dia = getVal('w_dia', 8.0);
+            const margin = getVal('w_margin', 3.0);
+            const dieW = getVal('d_w', 1.7);
+            const dieH = getVal('d_h', 1.0);
+            const scribe = getVal('d_scribe', 0.08);
+            
+            const segLen = getVal('w_seg_len', 0.4);
+            const segPitchX = getVal('w_seg_pitch', 1.7);
+            const startFlag = getVal('w_start_f', 2);
+            
+            const gridPitchY = dieH + scribe; 
+            const gridPitchX = dieW + scribe;
+
+            if (gridPitchY <= 0 || gridPitchX <= 0 || segPitchX <= 0) throw new Error("間距或尺寸不能為 0");
+
+            const showGrid = document.getElementById('v_show_grid').checked;
+            const diaMm = dia * 25.4;
+            const radius = (diaMm - margin) / 2.0;
+            const rSq = radius * radius;
+
+            const limit = Math.max(radius * 1.1, 10);
+            svg.setAttribute('viewBox', `-${limit} -${limit} ${limit*2} ${limit*2}`);
+
+            drawAxes(svg, limit, baseStroke);
+            addCircle(svg, 0, 0, diaMm/2, "#ccc", null, baseStroke);
+            addCircle(svg, 0, 0, radius, "#ff5252", "5,2", baseStroke);
+
+            // 計算晶圓格子並統計
+            let grossDie = 0;
+            let rowCounts = {}; // Y軸 (Key: j) 每一列有多少顆
+            let colCounts = {}; // X軸 (Key: i) 每一行有多少顆
+            
+            const rangeX = Math.ceil(radius / gridPitchX);
+            const rangeY = Math.ceil(radius / gridPitchY);
+            
+            let gridPathStr = "";
+            
+            // 無論是否顯示格子，都要計算數量
+            if (rangeX * rangeY < 50000) {
+                for(let i = -rangeX; i <= rangeX; i++) {
+                    for(let j = -rangeY; j <= rangeY; j++) {
+                        const cx = i * gridPitchX;
+                        const cy = j * gridPitchY;
+                        const l=cx-dieW/2, r=cx+dieW/2, t=cy-dieH/2, b=cy+dieH/2;
+                        
+                        // 判斷晶片是否有效
+                        if (l*l+t*t<=rSq && r*r+t*t<=rSq && l*l+b*b<=rSq && r*r+b*b<=rSq) {
+                            grossDie++;
+                            
+                            // 統計行列
+                            rowCounts[j] = (rowCounts[j] || 0) + 1;
+                            colCounts[i] = (colCounts[i] || 0) + 1;
+
+                            // 如果需要顯示，加入路徑
+                            if (showGrid) {
+                                gridPathStr += `M${l.toFixed(3)},${t.toFixed(3)}h${dieW}v${dieH}h-${dieW}z `;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 更新統計顯示
+            const maxRow = Object.keys(colCounts).length > 0 ? Math.max(...Object.values(colCounts)) : 0; // 最寬的一列(X方向)
+            const maxCol = Object.keys(rowCounts).length > 0 ? Math.max(...Object.values(rowCounts)) : 0; // 最高的一行(Y方向)
+            
+            document.getElementById('stat_total').innerText = grossDie;
+            document.getElementById('stat_maxX').innerText = maxCol; // 最高列(Y軸統計)代表X軸最長
+            document.getElementById('stat_maxY').innerText = maxRow; // 最寬行(X軸統計)代表Y軸最長
+
+            // 繪製格子
+            if (showGrid && gridPathStr) {
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", gridPathStr);
+                path.setAttribute("fill", "#e3f2fd");
+                path.setAttribute("stroke", "#2196f3");
+                path.setAttribute("stroke-width", baseStroke);
+                svg.appendChild(path);
+            }
+
+            // 畫線段 (Dispensing Path)
+            csvData = [];
+            let segCount = 0;
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            
+            const maxY = Math.floor(radius / gridPitchY);
+            const maxX = Math.floor(radius / segPitchX);
+            
+            let isFirstPointOfFile = true;
+
+            for (let i = maxY; i >= -maxY; i--) {
+                const y = i * gridPitchY; 
+                if (Math.abs(y) > radius) continue;
+
+                let isFirstPointOfRow = true;
+
+                for (let j = -maxX; j <= maxX; j++) {
+                    const cx = j * segPitchX;
+                    const halfL = segLen / 2.0;
+                    const x1 = cx - halfL;
+                    const x2 = cx + halfL;
+
+                    const d1 = x1*x1 + y*y;
+                    const d2 = x2*x2 + y*y;
+
+                    if (d1 <= rSq && d2 <= rSq) {
+                        
+                        let currentFlag = 0;
+                        if (isFirstPointOfRow) {
+                            currentFlag = 2;
+                        }
+                        if (isFirstPointOfFile) {
+                            currentFlag = startFlag;
+                            isFirstPointOfFile = false;
+                        }
+
+                        // 畫線
+                        addLine(group, x1, y, x2, y, "#00c853", baseStroke * 3, null);
+
+                        // 視覺化 Jump (Flag 2)
+                        if (currentFlag === 2 && csvData.length > 0) {
+                            let lastPt = csvData[csvData.length - 1];
+                            addLine(group, lastPt.x, lastPt.y, x1, y, "red", baseStroke, "4,2");
+                        }
+
+                        csvData.push({x: x1, y: y, f: currentFlag}); 
+                        csvData.push({x: x2, y: y, f: 1});
+                        
+                        segCount++;
+                        isFirstPointOfRow = false; 
+                    }
+                }
+            }
+            svg.appendChild(group);
+            document.getElementById('status-text').innerText = `Wafer Mode: 生成 ${segCount} 條線段 (每行首點 F=2)`;
+        }
+
+        // --- 2. 矩形模式 (Rect) ---
+        function drawRectMode(svg, baseStroke) {
+            const w = getVal('r_w', 50.0);
+            const h = getVal('r_h', 50.0);
+            const segLen = getVal('r_seg_len', 0.4);
+            const pitchX = getVal('r_pitch_x', 1.7);
+            const pitchY = getVal('r_pitch_y', 1.7);
+            const startFlag = getVal('r_start_f', 2);
+
+            if (w <= 0 || h <= 0 || pitchX <= 0 || pitchY <= 0) throw new Error("矩形參數錯誤");
+
+            const limit = Math.max(w, h) * 0.6;
+            svg.setAttribute('viewBox', `-${limit} -${limit} ${limit*2} ${limit*2}`);
+            drawAxes(svg, limit, baseStroke);
+
+            const halfW = w / 2;
+            const halfH = h / 2;
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rect.setAttribute("x", -halfW); rect.setAttribute("y", -halfH);
+            rect.setAttribute("width", w); rect.setAttribute("height", h);
+            rect.setAttribute("fill", "none"); rect.setAttribute("stroke", "#ff5252");
+            rect.setAttribute("stroke-width", baseStroke);
+            rect.setAttribute("stroke-dasharray", "5,2");
+            svg.appendChild(rect);
+
+            csvData = [];
+            let segCount = 0;
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+            const countX = Math.floor(halfW / pitchX);
+            const countY = Math.floor(halfH / pitchY);
+            let isFirstPointOfFile = true;
+
+            for (let i = countY; i >= -countY; i--) {
+                const y = i * pitchY;
+                let isFirstPointOfRow = true;
+
+                for (let j = -countX; j <= countX; j++) {
+                    const cx = j * pitchX;
+                    const halfL = segLen / 2.0;
+                    const x1 = cx - halfL;
+                    const x2 = cx + halfL;
+
+                    if (x1 >= -halfW && x2 <= halfW) {
+                        
+                        let currentFlag = 0;
+                        if (isFirstPointOfRow) currentFlag = 2;
+                        if (isFirstPointOfFile) {
+                            currentFlag = startFlag;
+                            isFirstPointOfFile = false;
+                        }
+
+                        addLine(group, x1, y, x2, y, "#00c853", baseStroke * 3, null);
+                        
+                        if (currentFlag === 2 && csvData.length > 0) {
+                            let lastPt = csvData[csvData.length - 1];
+                            addLine(group, lastPt.x, lastPt.y, x1, y, "red", baseStroke, "4,2");
+                        }
+
+                        csvData.push({x: x1, y: y, f: currentFlag});
+                        csvData.push({x: x2, y: y, f: 1});
+                        segCount++;
+                        isFirstPointOfRow = false;
+                    }
+                }
+            }
+            svg.appendChild(group);
+            document.getElementById('status-text').innerText = `Rect Mode: 生成 ${segCount} 條線段 (每行首點 F=2)`;
+        }
+
+        // --- 3. Zigzag 模式 ---
+        function drawZigzagMode(svg, baseStroke) {
+            const maxX = getVal('z_maxx', 140.0);
+            const maxY = getVal('z_maxy', 140.0);
+            const drop = getVal('z_drop', 0.4);
+            const step = getVal('z_step', 1.0);
+            const row = getVal('z_row', 1.7);
+            const startFlag = getVal('z_start_f', 2);
+
+            const padding = 10;
+            svg.setAttribute('viewBox', `${-padding} ${-maxY-padding} ${maxX+padding*2} ${maxY+padding*2}`);
+            
+            const axisNeg = padding / 2;
+            addLine(svg, -axisNeg, 0, maxX + axisNeg, 0, "#aaa", baseStroke * 0.8);
+            addLine(svg, 0, axisNeg, 0, -maxY - axisNeg, "#aaa", baseStroke * 0.8);
+
+            csvData = [];
+            let curY = 0.0;
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+            while(Math.abs(curY) <= maxY) {
+                let lastPt = csvData.length ? csvData[csvData.length-1] : {x:0, y:0};
+                
+                let jumpFlag = 2;
+                if (csvData.length === 0) jumpFlag = startFlag;
+
+                csvData.push({x:0, y:curY, f:jumpFlag}); // Jump start
+                
+                if(jumpFlag === 2 && csvData.length > 1) {
+                    addLine(group, lastPt.x, lastPt.y, 0, curY, "red", baseStroke, "4,2");
+                }
+
+                let curX = 0.0;
+                while(curX < maxX) {
+                    let yDown = curY - drop;
+                    addLine(group, curX, curY, curX, yDown, "#007ACC", baseStroke * 1.5);
+                    csvData.push({x:curX, y:yDown, f:1});
+
+                    let nextX = curX + step;
+                    addLine(group, curX, yDown, nextX, curY, "#999", baseStroke, "2,1");
+                    curX = nextX;
+                    csvData.push({x:curX, y:curY, f:0});
+                }
+                curY -= row;
+            }
+            svg.appendChild(group);
+            document.getElementById('status-text').innerText = `Zigzag Mode: 生成 ${csvData.length} 個節點`;
+        }
+
+        function downloadCSV() {
+            if (csvData.length === 0) {
+                alert("無數據可下載");
+                return;
+            }
+            let content = ""; 
+            csvData.forEach(d => {
+                content += `${d.x.toFixed(3)},${d.y.toFixed(3)},${d.f}\n`;
+            });
+            saveFile(content, "text/csv;charset=utf-8;", `${currentMode}_data.csv`);
+        }
+
+        function downloadSVG() {
+            const svg = document.getElementById('svgCanvas');
+            const serializer = new XMLSerializer();
+            let source = serializer.serializeToString(svg);
+            if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+                source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+            }
+            saveFile(source, "image/svg+xml;charset=utf-8", `${currentMode}_preview.svg`);
+        }
+
+        function saveFile(content, type, name) {
+            const blob = new Blob([content], { type: type });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function drawAxes(parent, limit, baseStroke) {
+            addLine(parent, -limit, 0, limit, 0, "#aaa", baseStroke * 0.8, null);
+            addLine(parent, 0, -limit, 0, limit, "#aaa", baseStroke * 0.8, null);
+        }
+
+        function addCircle(parent, cx, cy, r, stroke, dash, width) {
+            const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            c.setAttribute("cx", cx); c.setAttribute("cy", cy); c.setAttribute("r", r);
+            c.setAttribute("fill", "none"); c.setAttribute("stroke", stroke);
+            if(dash) c.setAttribute("stroke-dasharray", dash);
+            if(width) c.setAttribute("stroke-width", width);
+            parent.appendChild(c);
+        }
+        function addLine(parent, x1, y1, x2, y2, color, width, dash) {
+            const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            l.setAttribute("x1", x1); l.setAttribute("y1", y1);
+            l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+            l.setAttribute("stroke", color); l.setAttribute("stroke-width", width);
+            if(dash) l.setAttribute("stroke-dasharray", dash);
+            parent.appendChild(l);
+        }
+
+        window.onload = function() {
+            setMode('wafer');
+        };
+    </script>
+</body>
+</html>
