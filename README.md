@@ -1,2 +1,4 @@
 # wafer_dispensing
-generator dots for machine movement
+its a html GUI
+generator dispensing dots for machine movement
+have 3 of line mode
