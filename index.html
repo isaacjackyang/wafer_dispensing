@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>晶圓路徑系統 (完整修正版)</title>
+    <title>晶圓路徑系統</title>
     <style>
-        :root { --primary: #007ACC; --panel: #fff; --bg: #f4f7f6; }
+        :root { --primary: #007ACC; --panel: #fff; --bg: #f4f7f6; --active: #005fa3; }
         body { font-family: "Segoe UI", sans-serif; background: var(--bg); padding: 20px; display: flex; flex-direction: column; align-items: center; margin: 0; }
         
         h2 { margin-bottom: 20px; color: #333; }
@@ -35,40 +35,38 @@
         .mode-switch { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 6px; flex-wrap: wrap;}
         .mode-label { 
             flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 13px; color: #666;
-            transition: 0.2s; min-width: 70px;
+            transition: 0.2s; min-width: 60px;
         }
         .mode-label:hover { background: #ddd; }
         input[type="radio"] { display: none; }
         input[type="radio"]:checked + .mode-label { background: var(--primary); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-        /* 象限設定 */
+        /* 選項按鈕樣式 */
+        .options-box { background: #e0f2f1; padding: 10px; border-radius: 4px; border: 1px solid #80cbc4; margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px;}
+        .radio-group { display: flex; gap: 8px; font-size: 13px; font-weight: bold; color: #555; flex-wrap: wrap;}
+        .radio-btn { 
+            cursor: pointer; display: flex; align-items: center; gap: 5px; 
+            padding: 5px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; transition: 0.2s;
+        }
+        .radio-btn:hover { background: #f0f0f0; }
+        .radio-btn.active { background-color: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .radio-btn input { display: none; }
+
+        /* 象限與兩半模式 */
         .quad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
         .quad-box { border: 1px solid #ccc; border-radius: 6px; padding: 8px; background: #fafafa; display: flex; flex-direction: column; gap: 5px; }
         .quad-title { font-weight: bold; font-size: 13px; color: #333; border-bottom: 1px dashed #ddd; padding-bottom: 3px; }
         .quad-select { width: 100%; padding: 4px; border-radius: 4px; border: 1px solid #ddd; font-size: 12px;}
+        
+        .half-box { border: 1px solid #90caf9; border-radius: 6px; padding: 8px; background: #e3f2fd; margin-bottom: 10px; }
+        .half-title { font-weight: bold; font-size: 13px; color: #1565c0; border-bottom: 1px dashed #90caf9; padding-bottom: 3px; margin-bottom: 5px; }
+        .half-select { width: 100%; padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;}
 
         /* 起始點九宮格 */
         .corner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; width: 140px; margin-left: auto;}
-        .corner-btn { padding: 5px; border: 1px solid #ccc; background: white; text-align: center; cursor: pointer; font-size: 12px; border-radius: 4px; }
+        .corner-btn { padding: 5px; border: 1px solid #ccc; background: white; text-align: center; cursor: pointer; font-size: 12px; border-radius: 4px; transition:0.2s;}
         .corner-btn:hover { background: #f0f0f0; }
         .corner-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-        /* === 選項按鈕樣式 (修復亮顯) === */
-        .options-box { background: #e0f2f1; padding: 10px; border-radius: 4px; border: 1px solid #80cbc4; margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px;}
-        .radio-group { display: flex; gap: 8px; font-size: 13px; font-weight: bold; color: #555; flex-wrap: wrap;}
-        
-        .radio-group label { 
-            cursor: pointer; display: flex; align-items: center; gap: 5px; 
-            padding: 5px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; transition: 0.2s;
-        }
-        /* 選中時的樣式 */
-        .radio-group label:has(input:checked) { 
-            background-color: var(--primary); 
-            color: white; 
-            border-color: var(--primary);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .radio-group input { margin: 0; accent-color: white;} 
 
         .start-flag-row { background: #ffebee; border-left: 3px solid #f44336; padding-left: 5px; }
         
@@ -78,7 +76,8 @@
         .btn-green { background: #28a745; color: white; }
         .btn-blue { background: var(--primary); color: white; }
         .btn-dl-sub { background: #00897b; color: white; font-size: 12px; padding: 8px;}
-        
+        .btn-small { padding: 4px 8px; font-size: 11px; background: #666; color: white; border-radius: 3px; border:none; cursor: pointer;}
+
         .canvas-container { flex: 2; min-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; position: relative;}
         svg { border: 1px solid #ddd; background: #fff; max-width: 100%; height: auto; }
         .legend { display: flex; gap: 15px; margin-top: 10px; font-size: 12px; color: #666; flex-wrap: wrap; justify-content: center; }
@@ -88,12 +87,7 @@
         .status-box { margin-top: 15px; padding: 10px; background: #eef7fe; color: #005fa3; border-left: 4px solid var(--primary); font-size: 13px; width: 90%; }
         
         /* 統計與時間 */
-        .stats-panel { margin-top: 15px; padding: 10px; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 6px; }
-        
-        /* 工時面板 (公用) */
-        .time-panel { 
-            margin-bottom: 15px; padding: 10px; background: #fff3e0; border: 1px solid #ffe0b2; border-radius: 6px; 
-        }
+        .time-panel { margin-bottom: 15px; padding: 10px; background: #fff3e0; border: 1px solid #ffe0b2; border-radius: 6px; }
         .panel-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px dashed #ccc; padding-bottom: 4px; color: #444; }
         .stat-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; color: #333; }
         .stat-val { font-weight: bold; font-family: monospace; font-size: 15px;}
@@ -103,11 +97,12 @@
         .mode-rect-active .group-rect { display: block; }
         .mode-zigzag-active .group-zigzag { display: block; }
         .mode-quadrant-active .group-quadrant { display: block; }
+        .mode-twohalf-active .group-twohalf { display: block; }
     </style>
 </head>
 <body class="mode-wafer-active">
 
-    <h2>晶圓路徑系統 (完整修正版)</h2>
+    <h2>晶圓路徑系統 (矩形修正版)</h2>
 
     <div class="container">
         <div class="sidebar">
@@ -119,18 +114,18 @@
                 <input type="radio" name="mode" id="m_zigzag" onchange="setMode('zigzag')">
                 <label for="m_zigzag" class="mode-label">3. Z字形</label>
                 <input type="radio" name="mode" id="m_quadrant" onchange="setMode('quadrant')">
-                <label for="m_quadrant" class="mode-label" style="color:#d84315;">4. 象限</label>
+                <label for="m_quadrant" class="mode-label">4. 象限</label>
+                <input type="radio" name="mode" id="m_twohalf" onchange="setMode('twohalf')">
+                <label for="m_twohalf" class="mode-label" style="color:#d84315;">5. 兩半</label>
             </div>
 
             <div class="time-panel">
                 <div class="panel-title" style="color:#ef6c00;">工時預估 (All Modes)</div>
                 <div class="input-row"><label>作業速 (mm/s):</label><input type="number" id="speed_work" value="30" onchange="calculateTime()"></div>
                 <div class="input-row"><label>快移速 (mm/s):</label><input type="number" id="speed_jump" value="200" onchange="calculateTime()"></div>
-                
                 <div class="input-row" style="background:#fff8e1; border-left:3px solid #ff9800; padding-left:5px;">
-                    <label>加減速 (s):</label><input type="number" id="time_acc" value="0.02" step="0.01" onchange="calculateTime()">
+                    <label>加減速 (s):</label><input type="number" id="time_acc" value="0.05" step="0.01" onchange="calculateTime()">
                 </div>
-                
                 <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
                 <div class="stat-row"><span>總線段數:</span> <span class="stat-val" id="res_segs">0</span></div>
                 <div class="stat-row"><span>總路徑長:</span> <span class="stat-val" id="res_dist">0 m</span></div>
@@ -138,7 +133,7 @@
             </div>
 
             <div class="section-title">全域顯示與參數</div>
-            <div class="input-row"><label>SVG 線條粗細:</label><input type="number" id="v_stroke" value="0.05" step="0.01"></div>
+            <div class="input-row"><label>SVG 線條粗細:</label><input type="number" id="v_stroke" value="0.1" step="0.01"></div>
             <div class="input-row" style="margin-top:5px;"><label><input type="checkbox" id="v_show_grid" checked> 顯示晶片網格</label></div>
 
             <div id="wafer-dims">
@@ -155,16 +150,16 @@
                 <div class="section-title">路徑策略</div>
                 <div class="options-box">
                     <div style="font-size:12px; color:#666;">動作類型 (Pattern):</div>
-                    <div class="radio-group">
-                        <label><input type="radio" name="w_pattern" value="line" checked onchange="render()"> 橫向線段</label>
-                        <label><input type="radio" name="w_pattern" value="zigzag" onchange="render()"> 垂直 Z字</label>
+                    <div class="radio-group" id="grp-w-pat">
+                        <label class="radio-btn active"><input type="radio" name="w_pattern" value="line" checked onclick="updateRadioUI(this); render()"> 橫向線段</label>
+                        <label class="radio-btn"><input type="radio" name="w_pattern" value="zigzag" onclick="updateRadioUI(this); render()"> 垂直 Z字</label>
                     </div>
                     <hr style="width:100%; border:0; border-top:1px dashed #bbb; margin:5px 0;">
                     <div style="font-size:12px; color:#666;">掃描方式 (Travel):</div>
-                    <div class="radio-group">
-                        <label><input type="radio" name="w_travel" value="jump" onchange="render()"> 跳躍 (Jump)</label>
-                        <label><input type="radio" name="w_travel" value="snake" checked onchange="render()"> 蛇行 (Snake)</label>
-                        <label><input type="radio" name="w_travel" value="jumpsnake" onchange="render()"> 切割道 (J-Snake)</label>
+                    <div class="radio-group" id="grp-w-trav">
+                        <label class="radio-btn"><input type="radio" name="w_travel" value="jump" onclick="updateRadioUI(this); render()"> 跳躍</label>
+                        <label class="radio-btn active"><input type="radio" name="w_travel" value="snake" checked onclick="updateRadioUI(this); render()"> 蛇行</label>
+                        <label class="radio-btn"><input type="radio" name="w_travel" value="jumpsnake" onclick="updateRadioUI(this); render()"> 切割道</label>
                     </div>
                 </div>
                 <div class="input-row">
@@ -180,56 +175,18 @@
                 <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="w_start_f" value="2"></div>
             </div>
 
-            <div class="group-params group-quadrant">
-                <div class="section-title">象限設定</div>
-                <div class="quad-grid">
-                    <div class="quad-box" style="border-color:#2196f3;">
-                        <div class="quad-title" style="color:#1565c0;">Q2 (左上) X- Y-</div>
-                        <select id="q2_pattern" class="quad-select" onchange="render()"><option value="none">None</option><option value="line" selected>Line</option><option value="zigzag">Zig</option></select>
-                        <select id="q2_travel" class="quad-select" onchange="render()">
-                            <option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option>
-                        </select>
-                        <select id="q2_corner" class="quad-select" onchange="render()"><option value="tl" selected>起:左上</option><option value="tr">起:右上</option><option value="bl">起:左下</option><option value="br">起:右下</option></select>
-                    </div>
-                    <div class="quad-box" style="border-color:#4caf50;">
-                        <div class="quad-title" style="color:#2e7d32;">Q1 (右上) X+ Y-</div>
-                        <select id="q1_pattern" class="quad-select" onchange="render()"><option value="none">None</option><option value="line">Line</option><option value="zigzag" selected>Zig</option></select>
-                        <select id="q1_travel" class="quad-select" onchange="render()">
-                            <option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option>
-                        </select>
-                        <select id="q1_corner" class="quad-select" onchange="render()"><option value="tr" selected>起:右上</option><option value="tl">起:左上</option><option value="br">起:右下</option><option value="bl">起:左下</option></select>
-                    </div>
-                    <div class="quad-box" style="border-color:#ff9800;">
-                        <div class="quad-title" style="color:#ef6c00;">Q3 (左下) X- Y+</div>
-                        <select id="q3_pattern" class="quad-select" onchange="render()"><option value="none" selected>None</option><option value="line">Line</option><option value="zigzag">Zig</option></select>
-                        <select id="q3_travel" class="quad-select" onchange="render()">
-                            <option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option>
-                        </select>
-                        <select id="q3_corner" class="quad-select" onchange="render()"><option value="bl" selected>起:左下</option><option value="br">起:右下</option><option value="tl">起:左上</option><option value="tr">起:右上</option></select>
-                    </div>
-                    <div class="quad-box" style="border-color:#9c27b0;">
-                        <div class="quad-title" style="color:#6a1b9a;">Q4 (右下) X+ Y+</div>
-                        <select id="q4_pattern" class="quad-select" onchange="render()"><option value="none" selected>None</option><option value="line">Line</option><option value="zigzag">Zig</option></select>
-                        <select id="q4_travel" class="quad-select" onchange="render()">
-                            <option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option>
-                        </select>
-                        <select id="q4_corner" class="quad-select" onchange="render()"><option value="br" selected>起:右下</option><option value="bl">起:左下</option><option value="tr">起:右上</option><option value="tl">起:左上</option></select>
-                    </div>
-                </div>
-                <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="q_start_f" value="2"></div>
-            </div>
-
             <div class="group-params group-rect">
                 <div class="section-title">2. 矩形設定</div>
                 <div class="input-row"><label>寬 W (mm):</label><input type="number" id="r_w" value="50.0"></div>
                 <div class="input-row"><label>高 H (mm):</label><input type="number" id="r_h" value="50.0"></div>
                 <div class="input-row"><label>線段 Len:</label><input type="number" id="r_seg_len" value="0.4"></div>
-                <div class="input-row"><label>X 間距:</label><input type="number" id="r_pitch_x" value="1.7"></div>
-                <div class="input-row"><label>Y 間距:</label><input type="number" id="r_pitch_y" value="1.7"></div>
-                <div class="radio-group" style="margin-bottom:10px;">
-                    <label><input type="radio" name="r_travel" value="jump" onchange="render()"> Jump</label>
-                    <label><input type="radio" name="r_travel" value="snake" checked onchange="render()"> Snake</label>
-                    <label><input type="radio" name="r_travel" value="jumpsnake" onchange="render()"> J-Snake</label>
+                <div class="input-row"><label>X 間距 (Pitch):</label><input type="number" id="r_pitch_x" value="1.7"></div>
+                <div class="input-row"><label>Y 間距 (Row):</label><input type="number" id="r_pitch_y" value="1.0"></div>
+                
+                <div class="radio-group" id="grp-r-trav">
+                    <label class="radio-btn"><input type="radio" name="r_travel" value="jump" onclick="updateRadioUI(this); render()"> Jump</label>
+                    <label class="radio-btn active"><input type="radio" name="r_travel" value="snake" checked onclick="updateRadioUI(this); render()"> Snake</label>
+                    <label class="radio-btn"><input type="radio" name="r_travel" value="jumpsnake" onclick="updateRadioUI(this); render()"> J-Snake</label>
                 </div>
                 <div class="input-row"><label>起點:</label><div class="corner-grid"><div class="corner-btn active" id="btn-r-tl" onclick="setCorner('r','tl')">左上</div><div class="corner-btn" id="btn-r-tr" onclick="setCorner('r','tr')">右上</div><div class="corner-btn" id="btn-r-bl" onclick="setCorner('r','bl')">左下</div><div class="corner-btn" id="btn-r-br" onclick="setCorner('r','br')">右下</div></div><input type="hidden" id="r_corner" value="tl"></div>
                 <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="r_start_f" value="2"></div>
@@ -242,13 +199,79 @@
                 <div class="input-row"><label>Drop:</label><input type="number" id="z_drop" value="0.4"></div>
                 <div class="input-row"><label>Step:</label><input type="number" id="z_step" value="1.0"></div>
                 <div class="input-row"><label>Row Pitch:</label><input type="number" id="z_row" value="1.7"></div>
-                <div class="radio-group" style="margin-bottom:10px;">
-                    <label><input type="radio" name="z_travel" value="jump" onchange="render()"> Jump</label>
-                    <label><input type="radio" name="z_travel" value="snake" checked onchange="render()"> Snake</label>
-                    <label><input type="radio" name="z_travel" value="jumpsnake" onchange="render()"> J-Snake</label>
+                <div class="radio-group" id="grp-z-trav">
+                    <label class="radio-btn"><input type="radio" name="z_travel" value="jump" onclick="updateRadioUI(this); render()"> Jump</label>
+                    <label class="radio-btn active"><input type="radio" name="z_travel" value="snake" checked onclick="updateRadioUI(this); render()"> Snake</label>
+                    <label class="radio-btn"><input type="radio" name="z_travel" value="jumpsnake" onclick="updateRadioUI(this); render()"> J-Snake</label>
                 </div>
                 <div class="input-row"><label>起點:</label><div class="corner-grid"><div class="corner-btn active" id="btn-z-tl" onclick="setCorner('z','tl')">左上</div><div class="corner-btn" id="btn-z-tr" onclick="setCorner('z','tr')">右上</div><div class="corner-btn" id="btn-z-bl" onclick="setCorner('z','bl')">左下</div><div class="corner-btn" id="btn-z-br" onclick="setCorner('z','br')">右下</div></div><input type="hidden" id="z_corner" value="tl"></div>
                 <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="z_start_f" value="2"></div>
+            </div>
+
+            <div class="group-params group-quadrant">
+                <div class="section-title">4. 象限設定</div>
+                <div class="quad-grid">
+                    <div class="quad-box" style="border-color:#2196f3;">
+                        <div class="quad-title" style="color:#1565c0;">Q2 (左上) X- Y-</div>
+                        <select id="q2_pattern" class="quad-select" onchange="render()"><option value="none">None</option><option value="line" selected>Line</option><option value="zigzag">Zig</option></select>
+                        <select id="q2_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option></select>
+                        <select id="q2_corner" class="quad-select" onchange="render()"><option value="tl" selected>起:左上</option><option value="tr">起:右上</option><option value="bl">起:左下</option><option value="br">起:右下</option></select>
+                    </div>
+                    <div class="quad-box" style="border-color:#4caf50;">
+                        <div class="quad-title" style="color:#2e7d32;">Q1 (右上) X+ Y-</div>
+                        <select id="q1_pattern" class="quad-select" onchange="render()"><option value="none">None</option><option value="line">Line</option><option value="zigzag" selected>Zig</option></select>
+                        <select id="q1_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option></select>
+                        <select id="q1_corner" class="quad-select" onchange="render()"><option value="tr" selected>起:右上</option><option value="tl">起:左上</option><option value="br">起:右下</option><option value="bl">起:左下</option></select>
+                    </div>
+                    <div class="quad-box" style="border-color:#ff9800;">
+                        <div class="quad-title" style="color:#ef6c00;">Q3 (左下) X- Y+</div>
+                        <select id="q3_pattern" class="quad-select" onchange="render()"><option value="none" selected>None</option><option value="line">Line</option><option value="zigzag">Zig</option></select>
+                        <select id="q3_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option></select>
+                        <select id="q3_corner" class="quad-select" onchange="render()"><option value="bl" selected>起:左下</option><option value="br">起:右下</option><option value="tl">起:左上</option><option value="tr">起:右上</option></select>
+                    </div>
+                    <div class="quad-box" style="border-color:#9c27b0;">
+                        <div class="quad-title" style="color:#6a1b9a;">Q4 (右下) X+ Y+</div>
+                        <select id="q4_pattern" class="quad-select" onchange="render()"><option value="none" selected>None</option><option value="line">Line</option><option value="zigzag">Zig</option></select>
+                        <select id="q4_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option></select>
+                        <select id="q4_corner" class="quad-select" onchange="render()"><option value="br" selected>起:右下</option><option value="bl">起:左下</option><option value="tr">起:右上</option><option value="tl">起:左上</option></select>
+                    </div>
+                </div>
+                <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="q_start_f" value="2"></div>
+            </div>
+
+            <div class="group-params group-twohalf">
+                <div class="section-title">5. 兩半模式設定</div>
+                <button class="btn-small" onclick="autoCalcHalfRect()" style="margin-bottom:10px; width:100%;">自動計算最大內接矩形 (Auto Fit)</button>
+                
+                <div class="half-box" style="border-color:#4caf50; background:#e8f5e9;">
+                    <div class="half-title" style="color:#2e7d32;"><span>上半部 (Y&lt;0)</span></div>
+                    <div class="input-row"><label>寬 W:</label><input type="number" id="h_top_w" value="140.0"></div>
+                    <div class="input-row"><label>高 H:</label><input type="number" id="h_top_h" value="70.0"></div>
+                    <div class="input-row"><label>Y 偏移:</label><input type="number" id="h_top_off" value="5.0"></div>
+                    <select id="h_top_mode" class="half-select" onchange="render()">
+                        <option value="none">不繪製</option>
+                        <option value="rect" selected>模式 2 (矩形)</option>
+                        <option value="zigzag">模式 3 (Z字形)</option>
+                    </select>
+                </div>
+
+                <div class="half-box" style="border-color:#ff9800; background:#fff3e0;">
+                    <div class="half-title" style="color:#ef6c00;"><span>下半部 (Y&gt;0)</span></div>
+                    <div class="input-row"><label>寬 W:</label><input type="number" id="h_bot_w" value="140.0"></div>
+                    <div class="input-row"><label>高 H:</label><input type="number" id="h_bot_h" value="70.0"></div>
+                    <div class="input-row"><label>Y 偏移:</label><input type="number" id="h_bot_off" value="5.0"></div>
+                    <select id="h_bot_mode" class="half-select" onchange="render()">
+                        <option value="none">不繪製</option>
+                        <option value="rect">模式 2 (矩形)</option>
+                        <option value="zigzag" selected>模式 3 (Z字形)</option>
+                    </select>
+                </div>
+                
+                <div class="section-title">兩半共用參數</div>
+                <div class="input-row"><label>Step/Pitch X:</label><input type="number" id="h_step" value="1.7"></div>
+                <div class="input-row"><label>Row Pitch Y:</label><input type="number" id="h_row" value="1.7"></div>
+                <div class="input-row"><label>Drop (Zig only):</label><input type="number" id="h_drop" value="0.4"></div>
+                <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="h_start_f" value="2"></div>
             </div>
 
             <div class="btn-group">
@@ -256,7 +279,7 @@
             </div>
             <div class="btn-group">
                 <button class="btn-blue" onclick="downloadSVG()">下載 SVG</button>
-                <button class="btn-green" onclick="downloadCSV('all')">下載 CSV (全)</button>
+                <button class="btn-green" onclick="downloadCSV('all')">下載 CSV</button>
             </div>
             <div class="btn-group group-params group-quadrant" style="margin-top:5px; flex-wrap:wrap; gap:5px;">
                 <button class="btn-dl-sub" onclick="downloadCSV('Q1')">下載 Q1</button>
@@ -286,20 +309,38 @@
             render();
         }
 
+        // --- UI Helper ---
+        function updateRadioUI(input) {
+            let group = input.closest('.radio-group');
+            if(group){
+                group.querySelectorAll('.radio-btn').forEach(lbl => lbl.classList.remove('active'));
+                input.parentElement.classList.add('active');
+            }
+        }
+
         function setCorner(prefix, corner) {
             document.getElementById(`${prefix}_corner`).value = corner;
             ['tl','tr','bl','br'].forEach(c => {
                 const btn = document.getElementById(`btn-${prefix}-${c}`);
-                if(btn) {
-                    if(c === corner) btn.classList.add('active');
-                    else btn.classList.remove('active');
-                }
+                if(btn) { if(c === corner) btn.classList.add('active'); else btn.classList.remove('active'); }
             });
             render();
         }
 
         function getVal(id) { const el = document.getElementById(id); return el ? (parseFloat(el.value) || 0) : 0; }
         function getRadioVal(name) { const els = document.getElementsByName(name); for (let i = 0; i < els.length; i++) if (els[i].checked) return els[i].value; return ""; }
+
+        function autoCalcHalfRect() {
+            const dia = getVal('w_dia'); const margin = getVal('w_margin');
+            const radius = (dia * 25.4 - margin) / 2.0;
+            if (radius <= 0) return;
+            const w = radius * Math.sqrt(2); const h = radius / Math.sqrt(2); 
+            document.getElementById('h_top_w').value = w.toFixed(2);
+            document.getElementById('h_top_h').value = h.toFixed(2);
+            document.getElementById('h_bot_w').value = w.toFixed(2);
+            document.getElementById('h_bot_h').value = h.toFixed(2);
+            render();
+        }
 
         function render() {
             try {
@@ -319,7 +360,11 @@
                 } else if (currentMode === 'quadrant') {
                     drawWaferBasedMode(svg, stroke, 'quadrant');
                     updateLegend('wafer');
+                } else if (currentMode === 'twohalf') {
+                    drawTwoHalfMode(svg, stroke);
+                    updateLegend('twohalf');
                 }
+                
                 document.getElementById('status-text').innerText = `路徑生成完畢 (${csvData.length} 點)`;
                 calculateTime();
             } catch (err) {
@@ -329,24 +374,18 @@
         }
 
         function calculateTime() {
-            const vWork = getVal('speed_work'), vJump = getVal('speed_jump');
-            const tAcc = getVal('time_acc'); // 加減速時間
-            
+            const vWork = getVal('speed_work'), vJump = getVal('speed_jump'), tAcc = getVal('time_acc');
             let distWork = 0, distJump = 0, segCount = 0;
-            
             if (csvData.length > 1) {
                 let lastX = 0, lastY = 0;
                 let p0 = csvData[0];
-                distJump += Math.sqrt(p0.x*p0.x + p0.y*p0.y); 
-                segCount++; // 初始移動算一段
+                distJump += Math.sqrt(p0.x*p0.x + p0.y*p0.y); segCount++; 
                 lastX = p0.x; lastY = p0.y;
-                
                 for (let i = 1; i < csvData.length; i++) {
                     let p = csvData[i];
                     let d = Math.sqrt(Math.pow(p.x - lastX, 2) + Math.pow(p.y - lastY, 2));
                     if (p.f === 2) distJump += d; else distWork += d;
-                    segCount++; // 每一個點的移動都算一段(需要加減速)
-                    lastX = p.x; lastY = p.y;
+                    segCount++; lastX = p.x; lastY = p.y;
                 }
             }
             const totalTimeSec = (vWork > 0 ? distWork/vWork : 0) + (vJump > 0 ? distJump/vJump : 0) + (segCount * tAcc);
@@ -362,261 +401,279 @@
             let html = `<div class="leg-item"><div class="line-demo" style="background:#aaa; height:1px;"></div> 軸</div>`;
             html += `<div class="leg-item"><div class="line-demo" style="border-top:2px dotted red;"></div> F2 (Jump)</div>`;
             html += `<div class="leg-item"><div class="line-demo" style="background:#00c853;"></div> F1 (Disp)</div>`;
-            html += `<div class="leg-item"><div class="line-demo" style="border-top:2px dashed #999;"></div> F0 (Move)</div>`;
-            if (mode === 'wafer') html += `<div class="leg-item"><div class="color-box" style="background:#e3f2fd; border:1px solid #2196f3;"></div> 晶片</div>`;
+            if (mode==='zigzag'||mode==='twohalf') html += `<div class="leg-item"><div class="line-demo" style="border-top:2px dashed #999;"></div> F0 (Move)</div>`;
+            if (mode==='wafer'||mode==='quadrant') html += `<div class="leg-item"><div class="color-box" style="background:#e3f2fd; border:1px solid #2196f3;"></div> 晶片</div>`;
             el.innerHTML = html;
         }
 
-        // ================== LOGIC ==================
-
+        // ================== LOGIC: WAFER & QUADRANT ==================
         function drawWaferBasedMode(svg, baseStroke, modeType) {
-            const dia = getVal('w_dia'); const margin = getVal('w_margin');
-            const dieW = getVal('w_die_w'); const dieH = getVal('w_die_h'); const scribe = getVal('w_scribe');
-            const gridPitchX = dieW + scribe; const gridPitchY = dieH + scribe;
-            const radius = (dia * 25.4 - margin) / 2.0; const rSq = radius * radius;
+            const dia=getVal('w_dia'), margin=getVal('w_margin');
+            const dieW=getVal('w_die_w'), dieH=getVal('w_die_h'), scribe=getVal('w_scribe');
+            const radius=(dia*25.4-margin)/2.0, rSq=radius*radius;
+            const gridPitchX=dieW+scribe, gridPitchY=dieH+scribe;
+            const limit=Math.max(radius*1.1,10);
+            svg.setAttribute('viewBox',`-${limit} -${limit} ${limit*2} ${limit*2}`);
+            drawAxes(svg,limit,baseStroke); addCircle(svg,0,0,dia*25.4/2,"#ccc",null,baseStroke); addCircle(svg,0,0,radius,"#ff5252","5,2",baseStroke);
 
+            let validDies=[], rangeX=Math.ceil(radius/gridPitchX), rangeY=Math.ceil(radius/gridPitchY);
+            if(rangeX*rangeY<50000){
+                let gp="";
+                for(let j=-rangeY;j<=rangeY;j++) for(let i=-rangeX;i<=rangeX;i++){
+                    let cx=i*gridPitchX, cy=j*gridPitchY;
+                    let l=cx-dieW/2,r=cx+dieW/2,t=cy-dieH/2,b=cy+dieH/2;
+                    if(l*l+t*t<=rSq && r*r+t*t<=rSq && l*l+b*b<=rSq && r*r+b*b<=rSq){
+                        if(document.getElementById('v_show_grid').checked) gp+=`M${l.toFixed(2)},${t.toFixed(2)}h${dieW}v${dieH}h-${dieW}z `;
+                        let q="Q1"; if(cx>0&&cy<0)q="Q1"; else if(cx<=0&&cy<0)q="Q2"; else if(cx<=0&&cy>=0)q="Q3"; else q="Q4";
+                        validDies.push({i,j,cx,cy,q});
+                    }
+                }
+                if(gp){let p=document.createElementNS("http://www.w3.org/2000/svg","path"); p.setAttribute("d",gp); p.setAttribute("fill","#e3f2fd"); p.setAttribute("stroke","#2196f3"); p.setAttribute("stroke-width",baseStroke); svg.appendChild(p);}
+            }
+
+            csvData=[]; const group=document.createElementNS("http://www.w3.org/2000/svg","g");
+            let batches = (modeType==='wafer')?[{id:'all',dies:validDies}]:['Q1','Q2','Q3','Q4'].map(q=>({id:q,dies:validDies.filter(d=>d.q===q)}));
+            let isGF=true;
+
+            batches.forEach(b=>{
+                if(!b.dies.length)return;
+                let pat, trav, corn, sf, len;
+                if(modeType==='wafer'){ pat=getRadioVal('w_pattern'); trav=getRadioVal('w_travel'); corn=document.getElementById('w_corner').value; sf=getVal('w_start_f'); len=getVal('w_seg_len');}
+                else{ let id=b.id.toLowerCase(); pat=document.getElementById(`${id}_pattern`).value; if(pat==='none')return; trav=document.getElementById(`${id}_travel`).value; corn=document.getElementById(`${id}_corner`).value; sf=getVal('q_start_f'); len=getVal('w_seg_len');}
+
+                b.dies.sort((x,y)=>{
+                    let dy=(corn==='tl'||corn==='tr')?(x.j-y.j):(y.j-x.j); if(dy!==0)return dy;
+                    return (corn==='tl'||corn==='bl')?(x.i-y.i):(y.i-x.i);
+                });
+
+                let rows=[], cR=[], cJ=b.dies[0].j;
+                b.dies.forEach(d=>{if(d.j!==cJ){rows.push(cR);cR=[];cJ=d.j;}cR.push(d);}); if(cR.length)rows.push(cR);
+
+                let isFIB=true;
+                rows.forEach((row, rIdx)=>{
+                    if(trav==='snake' && rIdx%2!==0) row.reverse();
+                    if(trav==='jumpsnake' && rIdx>0 && csvData.length>0){
+                        let last=csvData[csvData.length-1];
+                        let nextStart=(pat==='line')?{x:row[0].cx-len/2,y:row[0].cy}:{x:row[0].cx,y:row[0].cy+len/2};
+                        let sy=(last.y+nextStart.y)/2.0;
+                        addLine(group,last.x,last.y,last.x,sy,"red",baseStroke,"4,2");
+                        csvData.push({x:last.x,y:sy,f:2,q:b.id});
+                        addLine(group,last.x,sy,nextStart.x,sy,"red",baseStroke,"4,2");
+                        csvData.push({x:nextStart.x,y:sy,f:2,q:b.id});
+                    }
+
+                    let isFIR=true;
+                    row.forEach(die=>{
+                        let s,e; if(pat==='line'){s={x:die.cx-len/2,y:die.cy};e={x:die.cx+len/2,y:die.cy};}else{s={x:die.cx,y:die.cy+len/2};e={x:die.cx,y:die.cy-len/2};}
+                        if(trav==='snake' && rIdx%2!==0){ let t=s; s=e; e=t; }
+
+                        let f=0; if(isFIR) f=2; if(isGF){f=sf;isGF=false;}
+                        if(csvData.length>0){
+                            let last=csvData[csvData.length-1];
+                            let c=f===2?"red":"#999", d=f===2?"4,2":"2,1";
+                            addLine(group,last.x,last.y,s.x,s.y,c,baseStroke,d);
+                        }
+                        csvData.push({x:s.x,y:s.y,f:f,q:b.id});
+                        addLine(group,s.x,s.y,e.x,e.y,"#00c853",baseStroke*3);
+                        csvData.push({x:e.x,y:e.y,f:1,q:b.id});
+                        isFIR=false; isFIB=false;
+                    });
+                });
+            });
+            svg.appendChild(group);
+        }
+
+        // ================== MODE 2: RECT ==================
+        function drawRectMode(svg, baseStroke) {
+            const w=getVal('r_w'), h=getVal('r_h'), len=getVal('r_seg_len');
+            const px=getVal('r_pitch_x'), py=getVal('r_pitch_y'), startF=getVal('r_start_f');
+            const travel=getRadioVal('r_travel'), corner=document.getElementById('r_corner').value;
+            const limit=Math.max(w,h)*0.6; svg.setAttribute('viewBox',`-${limit} -${limit} ${limit*2} ${limit*2}`);
+            drawAxes(svg,limit,baseStroke);
+            let r=document.createElementNS("http://www.w3.org/2000/svg","rect"); r.setAttribute("x",-w/2); r.setAttribute("y",-h/2); r.setAttribute("width",w); r.setAttribute("height",h); r.setAttribute("fill","none"); r.setAttribute("stroke","#ff5252"); r.setAttribute("stroke-dasharray","5,2"); r.setAttribute("stroke-width",baseStroke); svg.appendChild(r);
+
+            csvData=[]; const group=document.createElementNS("http://www.w3.org/2000/svg","g");
+            const cX=Math.floor(w/2/px), cY=Math.floor(h/2/py);
+            // Fix Epsilon
+            let gridPts=[]; for(let j=-cY; j<=cY; j++) for(let i=-cX; i<=cX; i++) {
+                let cx=i*px, cy=j*py; if(cx-len/2>=-w/2-0.001 && cx+len/2<=w/2+0.001) gridPts.push({cx,cy});
+            }
+            gridPts.sort((a,b)=>{ let dy=(corner==='tl'||corner==='tr')?a.cy-b.cy:b.cy-a.cy; if(Math.abs(dy)>0.001)return dy; return (corner==='tl'||corner==='bl')?a.cx-b.cx:b.cx-a.cx; });
+            let rows=[], cR=[], cJ=gridPts[0]?.cy;
+            gridPts.forEach(p=>{if(Math.abs(p.cy-cJ)>0.001){rows.push(cR);cR=[];cJ=p.cy;}cR.push(p);}); if(cR.length)rows.push(cR);
+
+            let isGF=true;
+            rows.forEach((row,rIdx)=>{
+                if(travel==='snake'&&rIdx%2!==0)row.reverse();
+                if(travel==='jumpsnake'&&rIdx>0&&csvData.length>0){
+                    let last=csvData[csvData.length-1], next={x:row[0].cx-len/2,y:row[0].cy}, sy=(last.y+next.y)/2.0;
+                    addLine(group,last.x,last.y,last.x,sy,"red",baseStroke,"4,2"); csvData.push({x:last.x,y:sy,f:2,q:'R'});
+                    addLine(group,last.x,sy,next.x,sy,"red",baseStroke,"4,2"); csvData.push({x:next.x,y:sy,f:2,q:'R'});
+                }
+                let isFR=true;
+                row.forEach(pt=>{
+                    let s={x:pt.cx-len/2,y:pt.cy}, e={x:pt.cx+len/2,y:pt.cy};
+                    if(travel==='snake'&&rIdx%2!==0){let t=s;s=e;e=t;}
+                    let f=0; if(isFR)f=2; if(isGF){f=startF;isGF=false;}
+                    if(csvData.length>0){let last=csvData[csvData.length-1]; let c=f===2?"red":"#999",d=f===2?"4,2":"2,1"; addLine(group,last.x,last.y,s.x,s.y,c,baseStroke,d);}
+                    csvData.push({x:s.x,y:s.y,f:f,q:'R'}); addLine(group,s.x,s.y,e.x,e.y,"#00c853",baseStroke*3); csvData.push({x:e.x,y:e.y,f:1,q:'R'}); isFR=false;
+                });
+            });
+            svg.appendChild(group);
+        }
+
+        // ================== MODE 3: ZIGZAG ==================
+        function drawZigzagMode(svg, baseStroke) {
+            const mx=getVal('z_maxx'), my=getVal('z_maxy'), drop=getVal('z_drop');
+            const step=getVal('z_step'), row=getVal('z_row'), startF=getVal('z_start_f');
+            const travel=getRadioVal('z_travel'), corner=document.getElementById('z_corner').value;
+            const limit=10; svg.setAttribute('viewBox',`-${limit} -${my+limit} ${mx+limit*2} ${my+limit*2}`);
+            drawAxes(svg, limit, baseStroke); 
+            csvData=[]; const group=document.createElementNS("http://www.w3.org/2000/svg","g");
+
+            let rowsY=[]; let currY=0; while(currY>=-my){rowsY.push(currY);currY-=row;}
+            if(corner==='bl'||corner==='br')rowsY.reverse();
+
+            let isGF=true;
+            rowsY.forEach((y, rIdx)=>{
+                let isRev=(corner==='tr'||corner==='br'); if(travel==='snake'&&rIdx%2!==0)isRev=!isRev;
+                
+                if(travel==='jumpsnake'&&rIdx>0&&csvData.length>0){
+                    let last=csvData[csvData.length-1], nextX=isRev?mx:0, sy=(last.y+y)/2.0;
+                    addLine(group,last.x,last.y,last.x,sy,"red",baseStroke,"4,2"); csvData.push({x:last.x,y:sy,f:2,q:'Z'});
+                    addLine(group,last.x,sy,nextX,sy,"red",baseStroke,"4,2"); csvData.push({x:nextX,y:sy,f:2,q:'Z'});
+                }
+
+                let pts=[]; 
+                if(!isRev){ // L -> R
+                    let cx=0; while(cx<mx){
+                        pts.push({x:cx, y:y-drop, f:0}); 
+                        let nx=cx+step; if(nx>mx) nx=mx; 
+                        pts.push({x:nx, y:y, f:1}); 
+                        cx=nx; if(cx>=mx && step>0) break;
+                    }
+                } else { // R -> L
+                    let cx=mx; while(cx>0){
+                        pts.push({x:cx, y:y-drop, f:0}); 
+                        let nx=cx-step; if(nx<0) nx=0; 
+                        pts.push({x:nx, y:y, f:1}); 
+                        cx=nx; if(cx<=0 && step>0) break;
+                    }
+                }
+                
+                if(pts.length>0){
+                    let sX = pts[0].x; 
+                    let f=2; if(isGF) { f=startF; isGF=false; }
+                    let jp = {x:sX, y:y, f:f, q:'Z'};
+                    if(csvData.length>0) { let lp=csvData[csvData.length-1]; addLine(group,lp.x,lp.y,jp.x,jp.y,"red",baseStroke,"4,2"); }
+                    csvData.push(jp); let lp=jp;
+                    pts.forEach(p=>{
+                        let col=p.f===1?"#007ACC":"#999", w=p.f===1?baseStroke*1.5:baseStroke, d=p.f===0?"2,1":null;
+                        addLine(group,lp.x,lp.y,p.x,p.y,col,w,d); csvData.push({x:p.x,y:p.y,f:p.f,q:'Z'}); lp=p;
+                    });
+                }
+            });
+            svg.appendChild(group);
+        }
+
+        // ================== MODE 5: TWO-HALF ==================
+        function drawTwoHalfMode(svg, baseStroke) {
+            const dia = getVal('w_dia'); const margin = getVal('w_margin');
+            const radius = (dia * 25.4 - margin) / 2.0;
             const limit = Math.max(radius * 1.1, 10);
             svg.setAttribute('viewBox', `-${limit} -${limit} ${limit*2} ${limit*2}`);
             drawAxes(svg, limit, baseStroke);
             addCircle(svg, 0, 0, dia * 25.4 / 2, "#ccc", null, baseStroke);
             addCircle(svg, 0, 0, radius, "#ff5252", "5,2", baseStroke);
 
-            let validDies = []; let gridPath = "";
-            const rangeX = Math.ceil(radius / gridPitchX); const rangeY = Math.ceil(radius / gridPitchY);
-            if (rangeX * rangeY < 50000) {
-                for(let j = -rangeY; j <= rangeY; j++) {
-                    for(let i = -rangeX; i <= rangeX; i++) {
-                        let cx = i * gridPitchX, cy = j * gridPitchY;
-                        let l=cx-dieW/2, r=cx+dieW/2, t=cy-dieH/2, b=cy+dieH/2;
-                        if(l*l+t*t<=rSq && r*r+t*t<=rSq && l*l+b*b<=rSq && r*r+b*b<=rSq) {
-                            if (document.getElementById('v_show_grid').checked) gridPath += `M${l.toFixed(3)},${t.toFixed(3)}h${dieW}v${dieH}h-${dieW}z `;
-                            let quad = "Q1";
-                            if (cx > 0 && cy < 0) quad = "Q1";
-                            else if (cx <= 0 && cy < 0) quad = "Q2";
-                            else if (cx <= 0 && cy >= 0) quad = "Q3";
-                            else quad = "Q4";
-                            validDies.push({i, j, cx, cy, quad});
-                        }
-                    }
-                }
-            }
-            if (gridPath) {
-                let p = document.createElementNS("http://www.w3.org/2000/svg","path");
-                p.setAttribute("d", gridPath); p.setAttribute("fill", "#e3f2fd"); p.setAttribute("stroke", "#2196f3"); p.setAttribute("stroke-width", baseStroke);
-                svg.appendChild(p);
-            }
-
             csvData = [];
             const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            let processOrder = [];
-            if (modeType === 'wafer') processOrder = [{id:'all', dies: validDies}];
-            else processOrder = ['Q1','Q2','Q3','Q4'].map(q => ({id:q, dies:validDies.filter(d=>d.quad===q)}));
+            const startF = getVal('h_start_f');
+            const step = getVal('h_step'); const row = getVal('h_row'); const drop = getVal('h_drop');
+            const len = getVal('w_seg_len'); 
+
+            const halves = [
+                { id: 'Top', w: getVal('h_top_w'), h: getVal('h_top_h'), off: getVal('h_top_off'), mode: document.getElementById('h_top_mode').value, cy: -getVal('h_top_off') - getVal('h_top_h')/2 },
+                { id: 'Bot', w: getVal('h_bot_w'), h: getVal('h_bot_h'), off: getVal('h_bot_off'), mode: document.getElementById('h_bot_mode').value, cy: getVal('h_bot_off') + getVal('h_bot_h')/2 }
+            ];
 
             let isGlobalFirst = true;
 
-            processOrder.forEach(batch => {
-                if (batch.dies.length === 0) return;
-                let pattern, travel, corner, startF, len;
-                if (modeType === 'wafer') {
-                    pattern = getRadioVal('w_pattern'); travel = getRadioVal('w_travel');
-                    corner = document.getElementById('w_corner').value; startF = getVal('w_start_f'); len = getVal('w_seg_len');
-                } else {
-                    let id = batch.id.toLowerCase();
-                    pattern = document.getElementById(`${id}_pattern`).value; if (pattern === 'none') return;
-                    travel = document.getElementById(`${id}_travel`).value;
-                    corner = document.getElementById(`${id}_corner`).value; startF = getVal('q_start_f'); len = getVal('w_seg_len');
-                }
+            halves.forEach(half => {
+                if (half.mode === 'none') return;
+                let r = document.createElementNS("http://www.w3.org/2000/svg","rect");
+                r.setAttribute("x", -half.w/2); r.setAttribute("y", half.cy - half.h/2);
+                r.setAttribute("width", half.w); r.setAttribute("height", half.h);
+                r.setAttribute("fill", "none"); r.setAttribute("stroke", "#ff9800"); r.setAttribute("stroke-dasharray", "5,2");
+                svg.appendChild(r);
 
-                batch.dies.sort((a, b) => {
-                    let dy = 0;
-                    if (corner === 'tl' || corner === 'tr') dy = a.j - b.j;
-                    else dy = b.j - a.j;
-                    if (dy !== 0) return dy;
-                    if (corner === 'tl' || corner === 'bl') return a.i - b.i;
-                    else return b.i - a.i;
-                });
-
-                let rows=[], curR=[], curJ=batch.dies[0].j;
-                batch.dies.forEach(d => { if(d.j!==curJ){ rows.push(curR); curR=[]; curJ=d.j; } curR.push(d); });
-                if(curR.length) rows.push(curR);
-
-                let isFirstInBatch = true; 
-
-                rows.forEach((row, rIdx) => {
-                    let needReverse = false;
-                    if (travel === 'snake' && rIdx % 2 !== 0) needReverse = true;
-                    if (needReverse) row.reverse();
-
-                    let isFirstInRow = true;
-
-                    // == JUMPSNAKE LOGIC START (Between Rows) ==
-                    if (travel === 'jumpsnake' && !isGlobalFirst && !isFirstInBatch && csvData.length > 0) {
-                        let lastPt = csvData[csvData.length - 1];
-                        let nextRowStartPt = (pattern==='line') ? {x: row[0].cx - len/2, y: row[0].cy} : {x: row[0].cx, y: row[0].cy + len/2};
-                        
-                        let scribeY = (lastPt.y + nextRowStartPt.y) / 2.0;
-                        
-                        addLine(group, lastPt.x, lastPt.y, lastPt.x, scribeY, "red", baseStroke, "4,2");
-                        csvData.push({x: lastPt.x, y: scribeY, f: 2, q: batch.id});
-                        
-                        addLine(group, lastPt.x, scribeY, nextRowStartPt.x, scribeY, "red", baseStroke, "4,2");
-                        csvData.push({x: nextRowStartPt.x, y: scribeY, f: 2, q: batch.id});
-                    }
-                    // == JUMPSNAKE LOGIC END ==
-
-                    row.forEach(die => {
-                        let segStart, segEnd;
-                        if (pattern === 'line') { segStart={x:die.cx-len/2,y:die.cy}; segEnd={x:die.cx+len/2,y:die.cy}; } 
-                        else { segStart={x:die.cx,y:die.cy+len/2}; segEnd={x:die.cx,y:die.cy-len/2}; }
-
-                        let f = 0; if (isFirstInRow) f = 2;
-                        if (isGlobalFirst) { f = startF; isGlobalFirst = false; }
-
-                        if (csvData.length > 0) {
-                            let last = csvData[csvData.length-1];
-                            let c = f===2 ? "red" : "#999"; let d = f===2 ? "4,2" : "2,1";
-                            addLine(group, last.x, last.y, segStart.x, segStart.y, c, baseStroke, d);
-                        }
-                        
-                        csvData.push({x: segStart.x, y: segStart.y, f: f, q: batch.id});
-                        addLine(group, segStart.x, segStart.y, segEnd.x, segEnd.y, "#00c853", baseStroke*3);
-                        csvData.push({x: segEnd.x, y: segEnd.y, f: 1, q: batch.id});
-                        isFirstInRow = false;
-                        isFirstInBatch = false;
-                    });
-                });
-            });
-            svg.appendChild(group);
-        }
-
-        // --- Rect Mode ---
-        function drawRectMode(svg, baseStroke) {
-            const w=getVal('r_w'), h=getVal('r_h'), len=getVal('r_seg_len');
-            const px=getVal('r_pitch_x'), py=getVal('r_pitch_y'), startF=getVal('r_start_f');
-            const travel=getRadioVal('r_travel'), corner=document.getElementById('r_corner').value;
-
-            const limit=Math.max(w,h)*0.6; svg.setAttribute('viewBox',`-${limit} -${limit} ${limit*2} ${limit*2}`);
-            drawAxes(svg,limit,baseStroke);
-            let r=document.createElementNS("http://www.w3.org/2000/svg","rect");
-            r.setAttribute("x",-w/2); r.setAttribute("y",-h/2); r.setAttribute("width",w); r.setAttribute("height",h);
-            r.setAttribute("fill","none"); r.setAttribute("stroke","#ff5252"); r.setAttribute("stroke-dasharray","5,2"); r.setAttribute("stroke-width",baseStroke);
-            svg.appendChild(r);
-
-            csvData=[]; const group=document.createElementNS("http://www.w3.org/2000/svg","g");
-            const cX=Math.floor(w/2/px), cY=Math.floor(h/2/py);
-            
-            let gridPts = [];
-            for(let j=-cY; j<=cY; j++) {
-                for(let i=-cX; i<=cX; i++) {
-                    let cx=i*px, cy=j*py, x1=cx-len/2, x2=cx+len/2;
-                    if(x1>=-w/2 && x2<=w/2) gridPts.push({cx,cy});
-                }
-            }
-            gridPts.sort((a,b) => {
-                let dy = 0;
-                if (corner === 'tl' || corner === 'tr') dy = a.cy - b.cy;
-                else dy = b.cy - a.cy;
-                if(dy!==0) return dy;
-                if (corner === 'tl' || corner === 'bl') return a.cx - b.cx;
-                else return b.cx - a.cx;
-            });
-
-            let rows=[], curR=[], curJ=gridPts[0]?.cy;
-            gridPts.forEach(p => { if(Math.abs(p.cy-curJ)>0.001){ rows.push(curR); curR=[]; curJ=p.cy; } curR.push(p); });
-            if(curR.length) rows.push(curR);
-
-            let isFF=true;
-            rows.forEach((row, rIdx) => {
-                if(travel==='snake' && rIdx%2!==0) row.reverse();
+                const xMin = -half.w/2, xMax = half.w/2;
+                const yMin = half.cy - half.h/2, yMax = half.cy + half.h/2;
                 
-                // JUMPSNAKE Logic
-                if (travel === 'jumpsnake' && rIdx > 0 && csvData.length > 0) {
-                    let lastPt = csvData[csvData.length - 1];
-                    let nextStart = {x: row[0].cx - len/2, y: row[0].cy};
-                    let scribeY = (lastPt.y + nextStart.y) / 2.0;
-                    
-                    addLine(group, lastPt.x, lastPt.y, lastPt.x, scribeY, "red", baseStroke, "4,2");
-                    csvData.push({x: lastPt.x, y: scribeY, f: 2, q: 'R'});
-                    
-                    addLine(group, lastPt.x, scribeY, nextStart.x, scribeY, "red", baseStroke, "4,2");
-                    csvData.push({x: nextStart.x, y: scribeY, f: 2, q: 'R'});
-                }
-
-                let isFR=true;
-                row.forEach(pt => {
-                    let p1={x:pt.cx-len/2,y:pt.cy}, p2={x:pt.cx+len/2,y:pt.cy};
-                    if(travel==='snake' && rIdx%2!==0) { let t=p1; p1=p2; p2=t; }
-
-                    let f=0; if(isFR) f=2; if(isFF){ f=startF; isFF=false; }
-                    
-                    if(csvData.length>0){
-                        let last=csvData[csvData.length-1];
-                        let c=f===2?"red":"#999", d=f===2?"4,2":"2,1";
-                        addLine(group,last.x,last.y,p1.x,p1.y,c,baseStroke,d);
+                let rIdx = 0;
+                for (let y = yMin; y <= yMax; y += row) {
+                    let rowPts = [];
+                    if (half.mode === 'rect') {
+                        let xCount = Math.floor(half.w / step);
+                        let startX = xMin + (half.w - xCount*step)/2; 
+                        for(let i=0; i<=xCount; i++) {
+                            let cx = startX + i*step;
+                            if (cx - len/2 >= xMin && cx + len/2 <= xMax) {
+                                rowPts.push({x: cx - len/2, y: y, f: 2}); 
+                                rowPts.push({x: cx + len/2, y: y, f: 1});
+                            }
+                        }
+                        if (rIdx % 2 !== 0) {
+                            let newPts = [];
+                            for(let k=rowPts.length-2; k>=0; k-=2) {
+                                newPts.push({x: rowPts[k+1].x, y: y, f: 2});
+                                newPts.push({x: rowPts[k].x, y: y, f: 1});
+                            }
+                            rowPts = newPts;
+                        }
+                    } else {
+                        let isRev = (rIdx % 2 !== 0);
+                        let points = [];
+                        if (!isRev) { // L -> R
+                            let cx = xMin;
+                            while(cx < xMax) {
+                                points.push({x: cx, y: y - drop, f: 0}); // Move Up
+                                let nx = cx + step; if(nx > xMax) nx = xMax; // Clamp Next
+                                points.push({x: nx, y: y, f: 1}); // Disp Down
+                                cx = nx; if(cx >= xMax && step > 0) break;
+                            }
+                        } else { // R -> L
+                            let cx = xMax;
+                            while(cx > xMin) {
+                                points.push({x: cx, y: y - drop, f: 0}); // Move Up
+                                let nx = cx - step; if(nx < xMin) nx = xMin; // Clamp Next
+                                points.push({x: nx, y: y, f: 1}); // Disp Down
+                                cx = nx; if(cx <= xMin && step > 0) break;
+                            }
+                        }
+                        if (points.length > 0) {
+                            let startX = points[0].x;
+                            rowPts.push({x: startX, y: y, f: 2}); // Anchor Jump
+                            points.forEach(p => rowPts.push(p));
+                        }
                     }
-                    csvData.push({x:p1.x,y:p1.y,f:f,q:'R'});
-                    addLine(group,p1.x,p1.y,p2.x,p2.y,"#00c853",baseStroke*3);
-                    csvData.push({x:p2.x,y:p2.y,f:1,q:'R'});
-                    isFR=false;
-                });
-            });
-            svg.appendChild(group);
-        }
 
-        function drawZigzagMode(svg, baseStroke) {
-            const mx=getVal('z_maxx'), my=getVal('z_maxy'), drop=getVal('z_drop');
-            const step=getVal('z_step'), row=getVal('z_row'), startF=getVal('z_start_f');
-            const travel=getRadioVal('z_travel'), corner=document.getElementById('z_corner').value;
-
-            const limit=10; svg.setAttribute('viewBox',`-${limit} -${my+limit} ${mx+limit*2} ${my+limit*2}`);
-            drawAxes(svg, limit, baseStroke); 
-            csvData=[]; const group=document.createElementNS("http://www.w3.org/2000/svg","g");
-
-            let rowsY = []; let currY = 0;
-            while(currY >= -my) { rowsY.push(currY); currY -= row; }
-            if(corner==='bl' || corner==='br') rowsY.reverse();
-
-            let isFF=true;
-            rowsY.forEach((y, rIdx) => {
-                let isRev = (corner==='tr' || corner==='br');
-                if(travel==='snake' && rIdx%2!==0) isRev = !isRev;
-
-                // JUMPSNAKE Logic
-                if (travel === 'jumpsnake' && rIdx > 0 && csvData.length > 0) {
-                    let lastPt = csvData[csvData.length - 1];
-                    let nextStartX = isRev ? (Math.floor(mx/step)*step) : 0; 
-                    let scribeY = (lastPt.y + y) / 2.0;
-                    
-                    addLine(group, lastPt.x, lastPt.y, lastPt.x, scribeY, "red", baseStroke, "4,2");
-                    csvData.push({x: lastPt.x, y: scribeY, f: 2, q: 'Z'});
-                    
-                    addLine(group, lastPt.x, scribeY, nextStartX, scribeY, "red", baseStroke, "4,2");
-                    csvData.push({x: nextStartX, y: scribeY, f: 2, q: 'Z'});
-                }
-
-                let pts = [];
-                if(!isRev) { 
-                    let cx=0; while(cx < mx) { pts.push({x:cx, y:y-drop, f:1}); let nx=cx+step; pts.push({x:nx, y:y, f:0}); cx=nx; }
-                } else { 
-                    let cx=Math.floor(mx/step)*step; while(cx >= 0) { pts.push({x:cx, y:y-drop, f:1}); let nx=cx-step; if(nx>=0) pts.push({x:nx, y:y, f:0}); cx=nx; }
-                }
-
-                if(pts.length>0) {
-                    let startX = pts[0].x; 
-                    let f=2; if(isFF) { f=startF; isFF=false; }
-                    let jumpPt = {x:startX, y:y, f:f, q:'Z'};
-                    
-                    if(csvData.length>0) { 
-                        let lp=csvData[csvData.length-1]; 
-                        addLine(group,lp.x,lp.y,jumpPt.x,jumpPt.y,"red",baseStroke,"4,2"); 
+                    if (rowPts.length > 0) {
+                        if (isGlobalFirst) { rowPts[0].f = startF; isGlobalFirst = false; }
+                        if (csvData.length > 0) {
+                            let last = csvData[csvData.length-1]; let start = rowPts[0];
+                            addLine(group, last.x, last.y, start.x, start.y, "red", baseStroke, "4,2");
+                        }
+                        let lp = rowPts[0];
+                        csvData.push({...lp, q: half.id}); 
+                        for(let k=1; k<rowPts.length; k++) {
+                            let p = rowPts[k];
+                            let col=p.f===1?"#007ACC":"#999", w=p.f===1?baseStroke*1.5:baseStroke, d=p.f===0?"2,1":null;
+                            addLine(group, lp.x, lp.y, p.x, p.y, col, w, d);
+                            csvData.push({...p, q: half.id}); lp = p;
+                        }
                     }
-                    csvData.push(jumpPt);
-                    let lp=jumpPt;
-                    pts.forEach(p=>{
-                        let col=p.f===1?"#007ACC":"#999", w=p.f===1?baseStroke*1.5:baseStroke, d=p.f===0?"2,1":null;
-                        addLine(group,lp.x,lp.y,p.x,p.y,col,w,d);
-                        csvData.push({x:p.x, y:p.y, f:p.f, q:'Z'}); lp=p;
-                    });
+                    rIdx++;
                 }
             });
             svg.appendChild(group);
