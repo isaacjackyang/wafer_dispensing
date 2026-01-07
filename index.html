@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>晶圓路徑系統</title>
+    <title>晶圓路徑與點膠參數計算器 (v13)</title>
     <style>
         :root { --primary: #007ACC; --panel: #fff; --bg: #f4f7f6; --active: #005fa3; }
-        body { font-family: "Segoe UI", sans-serif; background: var(--bg); padding: 20px; display: flex; flex-direction: column; align-items: center; margin: 0; }
+        body { font-family: "Segoe UI", "Microsoft JhengHei", sans-serif; background: var(--bg); padding: 20px; display: flex; flex-direction: column; align-items: center; margin: 0; }
         
         h2 { margin-bottom: 20px; color: #333; }
 
@@ -14,7 +14,7 @@
 
         /* 左側設定區 */
         .sidebar { 
-            flex: 1; min-width: 420px; background: var(--panel); padding: 20px; 
+            flex: 1; min-width: 460px; background: var(--panel); padding: 20px; 
             border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: fit-content;
         }
 
@@ -27,7 +27,7 @@
         .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .input-row label { font-size: 14px; color: #555; font-weight: 500; }
         .input-row input[type="number"] { 
-            width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; 
+            width: 90px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; 
             text-align: right; font-family: monospace; 
         }
         
@@ -35,24 +35,23 @@
         .mode-switch { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 6px; flex-wrap: wrap;}
         .mode-label { 
             flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 13px; color: #666;
-            transition: 0.2s; min-width: 60px;
+            transition: 0.2s; min-width: 50px;
         }
         .mode-label:hover { background: #ddd; }
         input[type="radio"] { display: none; }
         input[type="radio"]:checked + .mode-label { background: var(--primary); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-        /* 選項按鈕樣式 */
+        /* 選項按鈕 */
         .options-box { background: #e0f2f1; padding: 10px; border-radius: 4px; border: 1px solid #80cbc4; margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px;}
         .radio-group { display: flex; gap: 8px; font-size: 13px; font-weight: bold; color: #555; flex-wrap: wrap;}
         .radio-btn { 
             cursor: pointer; display: flex; align-items: center; gap: 5px; 
             padding: 5px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; transition: 0.2s;
         }
-        .radio-btn:hover { background: #f0f0f0; }
         .radio-btn.active { background-color: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .radio-btn input { display: none; }
 
-        /* 象限與兩半模式 */
+        /* 樣式與排版 */
         .quad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
         .quad-box { border: 1px solid #ccc; border-radius: 6px; padding: 8px; background: #fafafa; display: flex; flex-direction: column; gap: 5px; }
         .quad-title { font-weight: bold; font-size: 13px; color: #333; border-bottom: 1px dashed #ddd; padding-bottom: 3px; }
@@ -62,7 +61,6 @@
         .half-title { font-weight: bold; font-size: 13px; color: #1565c0; border-bottom: 1px dashed #90caf9; padding-bottom: 3px; margin-bottom: 5px; }
         .half-select { width: 100%; padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-size: 12px; margin-bottom: 5px;}
 
-        /* 起始點九宮格 */
         .corner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; width: 140px; margin-left: auto;}
         .corner-btn { padding: 5px; border: 1px solid #ccc; background: white; text-align: center; cursor: pointer; font-size: 12px; border-radius: 4px; transition:0.2s;}
         .corner-btn:hover { background: #f0f0f0; }
@@ -86,11 +84,30 @@
         .line-demo { width: 25px; height: 3px; }
         .status-box { margin-top: 15px; padding: 10px; background: #eef7fe; color: #005fa3; border-left: 4px solid var(--primary); font-size: 13px; width: 90%; }
         
-        /* 統計與時間 */
+        .stats-panel { margin-top: 15px; padding: 10px; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 6px; }
         .time-panel { margin-bottom: 15px; padding: 10px; background: #fff3e0; border: 1px solid #ffe0b2; border-radius: 6px; }
         .panel-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px dashed #ccc; padding-bottom: 4px; color: #444; }
         .stat-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; color: #333; }
         .stat-val { font-weight: bold; font-family: monospace; font-size: 15px;}
+
+        /* Calc & DotCalc 專用 */
+        .calc-input { background: #fffde7; border-color: #fbc02d !important; }
+        .calc-result-panel { margin-top: 15px; padding: 10px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 6px; }
+        .calc-input-section { margin-bottom: 15px; }
+        .offset-group { background-color: #eef6fc; padding: 15px; border-radius: 8px; border: 1px solid #d6e9f9; margin-top: 10px; }
+        .offset-title { color: #0056b3; font-size: 13px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px dashed #b8daff; padding-bottom: 5px; }
+        .unit-hint { font-size: 11px; color: #888; text-align: right; margin-top: -5px; margin-bottom: 5px;}
+        
+        .result-card { background: #fff; border: 1px solid #eee; border-radius: 8px; margin-top: 15px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card-header { padding: 10px 15px; font-weight: bold; color: white; font-size: 13px; }
+        .bg-blue { background-color: #17a2b8; }
+        .bg-green { background-color: #28a745; }
+        .bg-purple { background-color: #6f42c1; }
+        .card-body { padding: 15px; }
+        .result-row { display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed #eee; padding-bottom: 4px; font-size: 13px; }
+        .highlight-value { font-weight: bold; color: #333; }
+        .highlight-hz { font-weight: bold; color: #dc3545; font-size: 1.2em; }
+        .error { color: #721c24; background-color: #f8d7da; padding: 10px; border-radius: 4px; margin-top: 10px; display: none; font-size: 12px;}
 
         .group-params { display: none; }
         .mode-wafer-active .group-wafer { display: block; }
@@ -98,81 +115,92 @@
         .mode-zigzag-active .group-zigzag { display: block; }
         .mode-quadrant-active .group-quadrant { display: block; }
         .mode-twohalf-active .group-twohalf { display: block; }
+        .mode-calc-active .group-calc { display: block; }
+        .mode-dotcalc-active .group-dotcalc { display: block; }
     </style>
 </head>
 <body class="mode-wafer-active">
 
-    <h2>晶圓路徑系統 (矩形修正版)</h2>
+    <h2>晶圓路徑與點膠參數計算器 (v13)</h2>
 
     <div class="container">
         <div class="sidebar">
             <div class="mode-switch">
                 <input type="radio" name="mode" id="m_wafer" checked onchange="setMode('wafer')">
-                <label for="m_wafer" class="mode-label">1. 晶圓</label>
+                <label for="m_wafer" class="mode-label">1.晶圓</label>
                 <input type="radio" name="mode" id="m_rect" onchange="setMode('rect')">
-                <label for="m_rect" class="mode-label">2. 矩形</label>
+                <label for="m_rect" class="mode-label">2.矩形</label>
                 <input type="radio" name="mode" id="m_zigzag" onchange="setMode('zigzag')">
-                <label for="m_zigzag" class="mode-label">3. Z字形</label>
+                <label for="m_zigzag" class="mode-label">3.Z字</label>
                 <input type="radio" name="mode" id="m_quadrant" onchange="setMode('quadrant')">
-                <label for="m_quadrant" class="mode-label">4. 象限</label>
+                <label for="m_quadrant" class="mode-label">4.象限</label>
                 <input type="radio" name="mode" id="m_twohalf" onchange="setMode('twohalf')">
-                <label for="m_twohalf" class="mode-label" style="color:#d84315;">5. 兩半</label>
+                <label for="m_twohalf" class="mode-label">5.兩半</label>
+                <input type="radio" name="mode" id="m_calc" onchange="setMode('calc')">
+                <label for="m_calc" class="mode-label" style="color:#d84315;">6.速度</label>
+                <input type="radio" name="mode" id="m_dotcalc" onchange="setMode('dotcalc')">
+                <label for="m_dotcalc" class="mode-label" style="color:#6f42c1;">7.點膠</label>
             </div>
 
-            <div class="time-panel">
-                <div class="panel-title" style="color:#ef6c00;">工時預估 (All Modes)</div>
-                <div class="input-row"><label>作業速 (mm/s):</label><input type="number" id="speed_work" value="30" onchange="calculateTime()"></div>
-                <div class="input-row"><label>快移速 (mm/s):</label><input type="number" id="speed_jump" value="200" onchange="calculateTime()"></div>
-                <div class="input-row" style="background:#fff8e1; border-left:3px solid #ff9800; padding-left:5px;">
-                    <label>加減速 (s):</label><input type="number" id="time_acc" value="0.05" step="0.01" onchange="calculateTime()">
+            <div id="global-display">
+                <div class="section-title">全域顯示與參數</div>
+                <div class="input-row"><label>SVG 線條粗細:</label><input type="number" id="v_stroke" value="0.05" step="0.01" onchange="render()"></div>
+                <div class="input-row" style="margin-top:5px;"><label><input type="checkbox" id="v_show_grid" checked> 顯示晶片網格 (M1-M5)</label></div>
+                
+                <div class="input-row" style="background:#e3f2fd; border-left:3px solid #2196f3; padding-left:5px;">
+                    <label>全域偏移 X (um):</label><input type="number" id="g_off_x" value="0" onchange="render()">
                 </div>
-                <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
-                <div class="stat-row"><span>總線段數:</span> <span class="stat-val" id="res_segs">0</span></div>
-                <div class="stat-row"><span>總路徑長:</span> <span class="stat-val" id="res_dist">0 m</span></div>
-                <div class="stat-row"><span>預估時間:</span> <span class="stat-val" id="res_time" style="color:#d84315; font-size:16px;">00:00</span></div>
+                <div class="input-row" style="background:#e3f2fd; border-left:3px solid #2196f3; padding-left:5px;">
+                    <label>全域偏移 Y (um):</label><input type="number" id="g_off_y" value="0" onchange="render()">
+                </div>
             </div>
 
-            <div class="section-title">全域顯示與參數</div>
-            <div class="input-row"><label>SVG 線條粗細:</label><input type="number" id="v_stroke" value="0.1" step="0.01"></div>
-            <div class="input-row" style="margin-top:5px;"><label><input type="checkbox" id="v_show_grid" checked> 顯示晶片網格</label></div>
+            <div id="motion-wafer-config">
+                <div class="time-panel">
+                    <div class="panel-title" style="color:#ef6c00;">工時預估</div>
+                    <div class="input-row"><label>作業速 (mm/s):</label><input type="number" id="speed_work" value="30" onchange="calculateTime()"></div>
+                    <div class="input-row"><label>快移速 (mm/s):</label><input type="number" id="speed_jump" value="50" onchange="calculateTime()"></div>
+                    <div class="input-row" style="background:#fff8e1; border-left:3px solid #ff9800; padding-left:5px;">
+                        <label>加減速 (s):</label><input type="number" id="time_acc" value="0.016" step="0.01" onchange="calculateTime()">
+                    </div>
+                    <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
+                    <div class="stat-row"><span>總線段數:</span> <span class="stat-val" id="res_segs">0</span></div>
+                    <div class="stat-row"><span>總路徑長:</span> <span class="stat-val" id="res_dist">0 m</span></div>
+                    <div class="stat-row"><span>預估時間:</span> <span class="stat-val" id="res_time" style="color:#d84315; font-size:16px;">00:00</span></div>
+                </div>
 
-            <div id="wafer-dims">
-                <div class="section-title">晶圓與晶片尺寸</div>
-                <div class="input-row"><label>直徑 (inch):</label><input type="number" id="w_dia" value="8.0"></div>
-                <div class="input-row"><label>邊緣內縮 (mm):</label><input type="number" id="w_margin" value="5.0"></div>
-                <div class="input-row"><label>晶片寬 X (mm):</label><input type="number" id="w_die_w" value="1.645"></div>
-                <div class="input-row"><label>晶片高 Y (mm):</label><input type="number" id="w_die_h" value="0.945"></div>
-                <div class="input-row"><label>切割道 Scribe:</label><input type="number" id="w_scribe" value="0.055"></div>
-                <div class="input-row"><label>線段長度 Len:</label><input type="number" id="w_seg_len" value="0.4"></div>
+                <div id="wafer-dims">
+                    <div class="section-title">晶圓與晶片尺寸</div>
+                    <div class="input-row"><label>直徑 (inch):</label><input type="number" id="w_dia" value="8.0"></div>
+                    <div class="input-row"><label>邊緣內縮 (mm):</label><input type="number" id="w_margin" value="5.0"></div>
+                    <div class="input-row"><label>晶片寬 X (mm):</label><input type="number" id="w_die_w" value="1.645"></div>
+                    <div class="input-row"><label>晶片高 Y (mm):</label><input type="number" id="w_die_h" value="0.945"></div>
+                    <div class="input-row"><label>切割道 Scribe:</label><input type="number" id="w_scribe" value="0.08"></div>
+                    <div class="input-row"><label>線段長度 Len:</label><input type="number" id="w_seg_len" value="0.6"></div>
+                </div>
             </div>
 
             <div class="group-params group-wafer">
                 <div class="section-title">路徑策略</div>
                 <div class="options-box">
-                    <div style="font-size:12px; color:#666;">動作類型 (Pattern):</div>
+                    <div style="font-size:12px; color:#666;">動作類型:</div>
                     <div class="radio-group" id="grp-w-pat">
                         <label class="radio-btn active"><input type="radio" name="w_pattern" value="line" checked onclick="updateRadioUI(this); render()"> 橫向線段</label>
                         <label class="radio-btn"><input type="radio" name="w_pattern" value="zigzag" onclick="updateRadioUI(this); render()"> 垂直 Z字</label>
                     </div>
                     <hr style="width:100%; border:0; border-top:1px dashed #bbb; margin:5px 0;">
-                    <div style="font-size:12px; color:#666;">掃描方式 (Travel):</div>
+                    <div style="font-size:12px; color:#666;">掃描方式:</div>
                     <div class="radio-group" id="grp-w-trav">
                         <label class="radio-btn"><input type="radio" name="w_travel" value="jump" onclick="updateRadioUI(this); render()"> 跳躍</label>
                         <label class="radio-btn active"><input type="radio" name="w_travel" value="snake" checked onclick="updateRadioUI(this); render()"> 蛇行</label>
-                        <label class="radio-btn"><input type="radio" name="w_travel" value="jumpsnake" onclick="updateRadioUI(this); render()"> 切割道</label>
+                        <label class="radio-btn"><input type="radio" name="w_travel" value="jumpsnake" onclick="updateRadioUI(this); render()"> 切割道回歸</label>
                     </div>
                 </div>
-                <div class="input-row">
-                    <label>起始角落:</label>
-                    <div class="corner-grid">
-                        <div class="corner-btn active" id="btn-w-tl" onclick="setCorner('w', 'tl')">左上</div>
-                        <div class="corner-btn" id="btn-w-tr" onclick="setCorner('w', 'tr')">右上</div>
-                        <div class="corner-btn" id="btn-w-bl" onclick="setCorner('w', 'bl')">左下</div>
-                        <div class="corner-btn" id="btn-w-br" onclick="setCorner('w', 'br')">右下</div>
-                    </div>
-                    <input type="hidden" id="w_corner" value="tl">
-                </div>
+                <div class="input-row"><label>起點:</label><div class="corner-grid"><div class="corner-btn active" id="btn-w-tl" onclick="setCorner('w','tl')">左上</div><div class="corner-btn" id="btn-w-tr" onclick="setCorner('w','tr')">右上</div><div class="corner-btn" id="btn-w-bl" onclick="setCorner('w','bl')">左下</div><div class="corner-btn" id="btn-w-br" onclick="setCorner('w','br')">右下</div></div><input type="hidden" id="w_corner" value="tl"></div>
                 <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="w_start_f" value="2"></div>
+                <div class="stats-panel">
+                    <div class="stat-row" style="margin-bottom:0;"><span>有效晶片數:</span> <span class="stat-val" id="stat_total_w" style="color:#007ACC;">0</span></div>
+                </div>
             </div>
 
             <div class="group-params group-rect">
@@ -180,13 +208,13 @@
                 <div class="input-row"><label>寬 W (mm):</label><input type="number" id="r_w" value="50.0"></div>
                 <div class="input-row"><label>高 H (mm):</label><input type="number" id="r_h" value="50.0"></div>
                 <div class="input-row"><label>線段 Len:</label><input type="number" id="r_seg_len" value="0.4"></div>
-                <div class="input-row"><label>X 間距 (Pitch):</label><input type="number" id="r_pitch_x" value="1.7"></div>
-                <div class="input-row"><label>Y 間距 (Row):</label><input type="number" id="r_pitch_y" value="1.0"></div>
-                
+                <div class="input-row"><label>X 間距:</label><input type="number" id="r_pitch_x" value="1.7"></div>
+                <div class="input-row"><label>Y 間距:</label><input type="number" id="r_pitch_y" value="1.0"></div>
                 <div class="radio-group" id="grp-r-trav">
                     <label class="radio-btn"><input type="radio" name="r_travel" value="jump" onclick="updateRadioUI(this); render()"> Jump</label>
                     <label class="radio-btn active"><input type="radio" name="r_travel" value="snake" checked onclick="updateRadioUI(this); render()"> Snake</label>
                     <label class="radio-btn"><input type="radio" name="r_travel" value="jumpsnake" onclick="updateRadioUI(this); render()"> J-Snake</label>
+                    <label class="radio-btn"><input type="radio" name="r_travel" value="scribesnake" onclick="updateRadioUI(this); render()"> S-Snake</label>
                 </div>
                 <div class="input-row"><label>起點:</label><div class="corner-grid"><div class="corner-btn active" id="btn-r-tl" onclick="setCorner('r','tl')">左上</div><div class="corner-btn" id="btn-r-tr" onclick="setCorner('r','tr')">右上</div><div class="corner-btn" id="btn-r-bl" onclick="setCorner('r','bl')">左下</div><div class="corner-btn" id="btn-r-br" onclick="setCorner('r','br')">右下</div></div><input type="hidden" id="r_corner" value="tl"></div>
                 <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="r_start_f" value="2"></div>
@@ -203,6 +231,7 @@
                     <label class="radio-btn"><input type="radio" name="z_travel" value="jump" onclick="updateRadioUI(this); render()"> Jump</label>
                     <label class="radio-btn active"><input type="radio" name="z_travel" value="snake" checked onclick="updateRadioUI(this); render()"> Snake</label>
                     <label class="radio-btn"><input type="radio" name="z_travel" value="jumpsnake" onclick="updateRadioUI(this); render()"> J-Snake</label>
+                    <label class="radio-btn"><input type="radio" name="z_travel" value="scribesnake" onclick="updateRadioUI(this); render()"> S-Snake</label>
                 </div>
                 <div class="input-row"><label>起點:</label><div class="corner-grid"><div class="corner-btn active" id="btn-z-tl" onclick="setCorner('z','tl')">左上</div><div class="corner-btn" id="btn-z-tr" onclick="setCorner('z','tr')">右上</div><div class="corner-btn" id="btn-z-bl" onclick="setCorner('z','bl')">左下</div><div class="corner-btn" id="btn-z-br" onclick="setCorner('z','br')">右下</div></div><input type="hidden" id="z_corner" value="tl"></div>
                 <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="z_start_f" value="2"></div>
@@ -214,25 +243,25 @@
                     <div class="quad-box" style="border-color:#2196f3;">
                         <div class="quad-title" style="color:#1565c0;">Q2 (左上) X- Y-</div>
                         <select id="q2_pattern" class="quad-select" onchange="render()"><option value="none">None</option><option value="line" selected>Line</option><option value="zigzag">Zig</option></select>
-                        <select id="q2_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option></select>
+                        <select id="q2_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option><option value="scribesnake">S-Snake</option></select>
                         <select id="q2_corner" class="quad-select" onchange="render()"><option value="tl" selected>起:左上</option><option value="tr">起:右上</option><option value="bl">起:左下</option><option value="br">起:右下</option></select>
                     </div>
                     <div class="quad-box" style="border-color:#4caf50;">
                         <div class="quad-title" style="color:#2e7d32;">Q1 (右上) X+ Y-</div>
                         <select id="q1_pattern" class="quad-select" onchange="render()"><option value="none">None</option><option value="line">Line</option><option value="zigzag" selected>Zig</option></select>
-                        <select id="q1_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option></select>
+                        <select id="q1_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option><option value="scribesnake">S-Snake</option></select>
                         <select id="q1_corner" class="quad-select" onchange="render()"><option value="tr" selected>起:右上</option><option value="tl">起:左上</option><option value="br">起:右下</option><option value="bl">起:左下</option></select>
                     </div>
                     <div class="quad-box" style="border-color:#ff9800;">
                         <div class="quad-title" style="color:#ef6c00;">Q3 (左下) X- Y+</div>
                         <select id="q3_pattern" class="quad-select" onchange="render()"><option value="none" selected>None</option><option value="line">Line</option><option value="zigzag">Zig</option></select>
-                        <select id="q3_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option></select>
+                        <select id="q3_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option><option value="scribesnake">S-Snake</option></select>
                         <select id="q3_corner" class="quad-select" onchange="render()"><option value="bl" selected>起:左下</option><option value="br">起:右下</option><option value="tl">起:左上</option><option value="tr">起:右上</option></select>
                     </div>
                     <div class="quad-box" style="border-color:#9c27b0;">
                         <div class="quad-title" style="color:#6a1b9a;">Q4 (右下) X+ Y+</div>
                         <select id="q4_pattern" class="quad-select" onchange="render()"><option value="none" selected>None</option><option value="line">Line</option><option value="zigzag">Zig</option></select>
-                        <select id="q4_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option></select>
+                        <select id="q4_travel" class="quad-select" onchange="render()"><option value="snake" selected>Snake</option><option value="jump">Jump</option><option value="jumpsnake">J-Snake</option><option value="scribesnake">S-Snake</option></select>
                         <select id="q4_corner" class="quad-select" onchange="render()"><option value="br" selected>起:右下</option><option value="bl">起:左下</option><option value="tr">起:右上</option><option value="tl">起:左上</option></select>
                     </div>
                 </div>
@@ -241,32 +270,21 @@
 
             <div class="group-params group-twohalf">
                 <div class="section-title">5. 兩半模式設定</div>
-                <button class="btn-small" onclick="autoCalcHalfRect()" style="margin-bottom:10px; width:100%;">自動計算最大內接矩形 (Auto Fit)</button>
-                
+                <button class="btn-small" onclick="autoCalcHalfRect()" style="margin-bottom:10px; width:100%;">自動計算最大內接矩形</button>
                 <div class="half-box" style="border-color:#4caf50; background:#e8f5e9;">
                     <div class="half-title" style="color:#2e7d32;"><span>上半部 (Y&lt;0)</span></div>
                     <div class="input-row"><label>寬 W:</label><input type="number" id="h_top_w" value="140.0"></div>
                     <div class="input-row"><label>高 H:</label><input type="number" id="h_top_h" value="70.0"></div>
                     <div class="input-row"><label>Y 偏移:</label><input type="number" id="h_top_off" value="5.0"></div>
-                    <select id="h_top_mode" class="half-select" onchange="render()">
-                        <option value="none">不繪製</option>
-                        <option value="rect" selected>模式 2 (矩形)</option>
-                        <option value="zigzag">模式 3 (Z字形)</option>
-                    </select>
+                    <select id="h_top_mode" class="half-select" onchange="render()"><option value="none">不繪製</option><option value="rect" selected>模式 2 (矩形)</option><option value="zigzag">模式 3 (Z字形)</option></select>
                 </div>
-
                 <div class="half-box" style="border-color:#ff9800; background:#fff3e0;">
                     <div class="half-title" style="color:#ef6c00;"><span>下半部 (Y&gt;0)</span></div>
                     <div class="input-row"><label>寬 W:</label><input type="number" id="h_bot_w" value="140.0"></div>
                     <div class="input-row"><label>高 H:</label><input type="number" id="h_bot_h" value="70.0"></div>
                     <div class="input-row"><label>Y 偏移:</label><input type="number" id="h_bot_off" value="5.0"></div>
-                    <select id="h_bot_mode" class="half-select" onchange="render()">
-                        <option value="none">不繪製</option>
-                        <option value="rect">模式 2 (矩形)</option>
-                        <option value="zigzag" selected>模式 3 (Z字形)</option>
-                    </select>
+                    <select id="h_bot_mode" class="half-select" onchange="render()"><option value="none">不繪製</option><option value="rect">模式 2 (矩形)</option><option value="zigzag" selected>模式 3 (Z字形)</option></select>
                 </div>
-                
                 <div class="section-title">兩半共用參數</div>
                 <div class="input-row"><label>Step/Pitch X:</label><input type="number" id="h_step" value="1.7"></div>
                 <div class="input-row"><label>Row Pitch Y:</label><input type="number" id="h_row" value="1.7"></div>
@@ -274,10 +292,72 @@
                 <div class="input-row start-flag-row"><label>第一點 Flag:</label><input type="number" id="h_start_f" value="2"></div>
             </div>
 
+            <div class="group-params group-calc">
+                <div class="section-title">Offset 打點頻率計算</div>
+                <div class="input-row" style="background:#fff3e0; border-left:3px solid #ff9800; padding-left:5px; margin-bottom:10px;">
+                    <label>限制最大加速度:</label><input type="number" id="c_max_acc" value="1000.0" oninput="calculateOffsetProfile()">
+                    <div class="unit-hint" style="text-align:right; font-size:11px;">單位: mm/s²</div>
+                </div>
+                <div class="calc-input-section">
+                    <div class="input-row"><label>1. 等速段速度 (V):</label><input type="number" id="c_v" class="calc-input" value="100" oninput="calculateOffsetProfile()"></div>
+                    <div class="unit-hint">單位: mm/s</div>
+                    <div class="input-row"><label>2. 等速段距離 (S):</label><input type="number" id="c_s" class="calc-input" value="400" oninput="calculateOffsetProfile()"></div>
+                    <div class="unit-hint">單位: um</div>
+                    <div class="input-row"><label>3. 全段距離 (K):</label><input type="number" id="c_k" class="calc-input" value="1000" oninput="calculateOffsetProfile()"></div>
+                    <div class="unit-hint">單位: um</div>
+                </div>
+                <div class="offset-group">
+                    <div class="offset-title">打點參數 (位於 S 內)</div>
+                    <div class="input-row"><label>起始偏移 (Y):</label><input type="number" id="c_off_y" value="190" oninput="calculateOffsetProfile()"></div>
+                    <div class="unit-hint">單位: um</div>
+                    <div class="input-row"><label>結束偏移 (Z):</label><input type="number" id="c_off_z" value="190" oninput="calculateOffsetProfile()"></div>
+                    <div class="unit-hint">單位: um</div>
+                    <div class="input-row"><label>打點總數 (X):</label><input type="number" id="c_points" value="100" oninput="calculateOffsetProfile()"></div>
+                </div>
+                <div id="calc-error" class="error"></div>
+                <div class="result-card">
+                    <div class="card-header bg-green">實際打點參數</div>
+                    <div class="card-body">
+                        <div class="result-row"><span>有效打點距離:</span><span id="res_dist_print" class="highlight-value"></span></div>
+                        <div class="result-row"><span>點間距 (Pitch):</span><span id="res_pitch" class="highlight-value"></span></div>
+                        <div class="result-row"><span>觸發頻率 (Hz):</span><span id="res_hz" class="highlight-hz"></span></div>
+                    </div>
+                </div>
+                <div class="result-card">
+                    <div class="card-header bg-blue">運動物理參數</div>
+                    <div class="card-body">
+                        <div class="result-row"><span>加速度 (Acc):</span><span id="res_acc"></span></div>
+                        <div class="result-row"><span>總時間:</span><span id="res_t_total"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="group-params group-dotcalc">
+                <div class="section-title">點膠參數反推</div>
+                <div class="input-row"><label>線段總長 (L):</label><input type="number" id="d_len" value="0.4" oninput="calculateDotParams()"></div>
+                <div class="unit-hint">單位: mm</div>
+                <div class="input-row"><label>膠點數量 (N):</label><input type="number" id="d_count" value="3" step="1" oninput="calculateDotParams()"></div>
+                <div class="input-row"><label>膠點寬度 (W):</label><input type="number" id="d_w" value="0.4" oninput="calculateDotParams()"></div>
+                <div class="input-row"><label>運動速度 (V):</label><input type="number" id="d_speed" value="50.0" oninput="calculateDotParams()"></div>
+                <div class="unit-hint">單位: mm/s</div>
+                <div class="input-row" style="background:#f3e5f5; border-left:3px solid #ab47bc; padding-left:5px;">
+                    <label>膠點顯示縮放 (Scale):</label><input type="number" id="d_vis_scale" value="1.0" step="0.5" oninput="calculateDotParams()">
+                </div>
+
+                <div class="result-card">
+                    <div class="card-header bg-purple">計算結果</div>
+                    <div class="card-body">
+                        <div class="result-row"><span>點間距 (Pitch):</span><span id="d_res_pitch" class="highlight-value">--</span></div>
+                        <div class="result-row"><span>點膠頻率 (Hz):</span><span id="d_res_freq" class="highlight-hz">--</span></div>
+                        <div class="result-row"><span>間隙 (Gap):</span><span id="d_res_gap" class="highlight-value">--</span></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="btn-group">
                 <button class="btn-refresh" onclick="render()">更新預覽</button>
             </div>
-            <div class="btn-group">
+            <div class="btn-group" id="dl-group">
                 <button class="btn-blue" onclick="downloadSVG()">下載 SVG</button>
                 <button class="btn-green" onclick="downloadCSV('all')">下載 CSV</button>
             </div>
@@ -303,13 +383,25 @@
         function setMode(mode) {
             currentMode = mode;
             document.body.className = `mode-${mode}-active`;
+            
+            const common = document.getElementById('motion-wafer-config');
+            const dlGroup = document.getElementById('dl-group');
             const wDims = document.getElementById('wafer-dims');
-            if(mode === 'wafer' || mode === 'quadrant') wDims.style.display = 'block';
-            else wDims.style.display = 'none';
-            render();
+
+            if (mode === 'calc' || mode === 'dotcalc') {
+                common.style.display = 'none';
+                dlGroup.style.display = 'none';
+                wDims.style.display = 'none';
+                if(mode === 'calc') calculateOffsetProfile();
+                if(mode === 'dotcalc') calculateDotParams();
+            } else {
+                common.style.display = 'block';
+                dlGroup.style.display = 'flex';
+                if(mode==='wafer' || mode==='quadrant') wDims.style.display='block'; else wDims.style.display='none';
+                render();
+            }
         }
 
-        // --- UI Helper ---
         function updateRadioUI(input) {
             let group = input.closest('.radio-group');
             if(group){
@@ -322,7 +414,10 @@
             document.getElementById(`${prefix}_corner`).value = corner;
             ['tl','tr','bl','br'].forEach(c => {
                 const btn = document.getElementById(`btn-${prefix}-${c}`);
-                if(btn) { if(c === corner) btn.classList.add('active'); else btn.classList.remove('active'); }
+                if(btn) {
+                    if(c === corner) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                }
             });
             render();
         }
@@ -331,46 +426,31 @@
         function getRadioVal(name) { const els = document.getElementsByName(name); for (let i = 0; i < els.length; i++) if (els[i].checked) return els[i].value; return ""; }
 
         function autoCalcHalfRect() {
-            const dia = getVal('w_dia'); const margin = getVal('w_margin');
+            const dia = getVal('w_dia'), margin = getVal('w_margin');
             const radius = (dia * 25.4 - margin) / 2.0;
             if (radius <= 0) return;
             const w = radius * Math.sqrt(2); const h = radius / Math.sqrt(2); 
-            document.getElementById('h_top_w').value = w.toFixed(2);
-            document.getElementById('h_top_h').value = h.toFixed(2);
-            document.getElementById('h_bot_w').value = w.toFixed(2);
-            document.getElementById('h_bot_h').value = h.toFixed(2);
+            document.getElementById('h_top_w').value = w.toFixed(2); document.getElementById('h_top_h').value = h.toFixed(2);
+            document.getElementById('h_bot_w').value = w.toFixed(2); document.getElementById('h_bot_h').value = h.toFixed(2);
             render();
         }
 
         function render() {
+            if (currentMode === 'calc') { calculateOffsetProfile(); return; }
+            if (currentMode === 'dotcalc') { calculateDotParams(); return; }
             try {
-                const svg = document.getElementById('svgCanvas');
-                svg.innerHTML = ''; 
+                const svg = document.getElementById('svgCanvas'); svg.innerHTML = ''; 
                 const stroke = getVal('v_stroke') || 0.1;
 
-                if (currentMode === 'wafer') {
-                    drawWaferBasedMode(svg, stroke, 'wafer');
-                    updateLegend('wafer');
-                } else if (currentMode === 'rect') {
-                    drawRectMode(svg, stroke);
-                    updateLegend('rect');
-                } else if (currentMode === 'zigzag') {
-                    drawZigzagMode(svg, stroke);
-                    updateLegend('zigzag');
-                } else if (currentMode === 'quadrant') {
-                    drawWaferBasedMode(svg, stroke, 'quadrant');
-                    updateLegend('wafer');
-                } else if (currentMode === 'twohalf') {
-                    drawTwoHalfMode(svg, stroke);
-                    updateLegend('twohalf');
-                }
+                if (currentMode === 'wafer') { drawWaferBasedMode(svg, stroke, 'wafer'); updateLegend('wafer'); } 
+                else if (currentMode === 'rect') { drawRectMode(svg, stroke); updateLegend('rect'); } 
+                else if (currentMode === 'zigzag') { drawZigzagMode(svg, stroke); updateLegend('zigzag'); } 
+                else if (currentMode === 'quadrant') { drawWaferBasedMode(svg, stroke, 'quadrant'); updateLegend('wafer'); } 
+                else if (currentMode === 'twohalf') { drawTwoHalfMode(svg, stroke); updateLegend('twohalf'); }
                 
                 document.getElementById('status-text').innerText = `路徑生成完畢 (${csvData.length} 點)`;
                 calculateTime();
-            } catch (err) {
-                console.error(err);
-                document.getElementById('status-text').innerText = "錯誤: " + err.message;
-            }
+            } catch (err) { console.error(err); document.getElementById('status-text').innerText = "錯誤: " + err.message; }
         }
 
         function calculateTime() {
@@ -406,7 +486,151 @@
             el.innerHTML = html;
         }
 
-        // ================== LOGIC: WAFER & QUADRANT ==================
+        // ================== MODE 7: DOT CALC ==================
+        function calculateDotParams() {
+            const L = getVal('d_len');
+            const N = getVal('d_count');
+            const W = getVal('d_w');
+            const V = getVal('d_speed');
+            const visScale = getVal('d_vis_scale') || 1.0;
+            const stroke = getVal('v_stroke') || 0.1;
+            const svg = document.getElementById('svgCanvas');
+            svg.innerHTML = ''; 
+
+            if (L <= 0 || N <= 1 || V <= 0) {
+                document.getElementById('d_res_pitch').innerText = "--";
+                document.getElementById('d_res_freq').innerText = "--";
+                document.getElementById('d_res_gap').innerText = "--";
+                return;
+            }
+
+            const pitch = L / (N - 1);
+            const freq = V / pitch;
+            const gap = pitch - W;
+
+            document.getElementById('d_res_pitch').innerText = pitch.toFixed(3) + " mm";
+            document.getElementById('d_res_freq').innerText = freq.toFixed(1) + " Hz";
+            
+            const gapEl = document.getElementById('d_res_gap');
+            gapEl.innerText = gap.toFixed(3) + " mm";
+            gapEl.style.color = (gap < 0) ? "red" : "#333";
+            if(gap < 0) gapEl.innerText += " (重疊!)";
+
+            // Visual Scale Logic (Geometric Zoom)
+            // To visualize clearly: Multiply Length, Pitch, and Radius by Scale
+            const drawL = L * visScale;
+            const drawPitch = pitch * visScale;
+            const drawRadius = (W / 2) * visScale;
+
+            svg.setAttribute('viewBox', `-10 -20 ${drawL+20} 40`);
+            addLine(svg, 0, 0, drawL, 0, "#999", stroke);
+            
+            for(let i=0; i<N; i++) {
+                let cx = i * drawPitch;
+                let circle = document.createElementNS("http://www.w3.org/2000/svg","circle");
+                circle.setAttribute("cx", cx); circle.setAttribute("cy", 0);
+                circle.setAttribute("r", drawRadius); 
+                circle.setAttribute("fill", "rgba(0,122,204,0.3)");
+                circle.setAttribute("stroke", "#007ACC");
+                circle.setAttribute("stroke-width", stroke);
+                svg.appendChild(circle);
+            }
+            
+            document.getElementById('legend-area').innerHTML = `<div style="font-size:12px; color:#555;">視覺化: 長度${L}mm, ${N}點 (顯示放大:${visScale}x)</div>`;
+        }
+
+        // ================== MODE 6: OFFSET CALC ==================
+        function calculateOffsetProfile() {
+            const V_mms = getVal('c_v');
+            const S_um = getVal('c_s');
+            const K_um = getVal('c_k');
+            const Y_um = getVal('c_off_y');
+            const Z_um = getVal('c_off_z');
+            const X_pts = getVal('c_points');
+            const MaxAcc = getVal('c_max_acc');
+            const stroke = getVal('v_stroke') || 0.1;
+
+            const errDiv = document.getElementById('calc-error');
+            const svg = document.getElementById('svgCanvas');
+            svg.innerHTML = ''; 
+
+            if (V_mms <= 0 || S_um <= 0 || K_um <= 0 || X_pts <= 0) {
+                errDiv.style.display = 'block'; errDiv.innerText = "請輸入有效的正數參數"; return;
+            }
+            if (S_um > K_um) {
+                errDiv.style.display = 'block'; errDiv.innerText = "錯誤: 等速段(S) 不能大於 全段(K)"; return;
+            }
+            
+            const V_ums = V_mms * 1000;
+            const accDist = (K_um - S_um) / 2.0;
+            const acc_ums2 = (V_ums * V_ums) / (2 * accDist); 
+            const acc_mms2 = acc_ums2 / 1000000 * 1000;
+
+            if (MaxAcc > 0 && acc_mms2 > MaxAcc) {
+                errDiv.style.display = 'block'; 
+                errDiv.innerHTML = `<strong>警告:</strong> 所需加速度 <strong>${acc_mms2.toFixed(2)} mm/s²</strong> 超過限制 (${MaxAcc} mm/s²)<br>距離不足以加速到目標速度。`;
+            } else {
+                errDiv.style.display = 'none';
+            }
+
+            const tAcc = V_ums / acc_ums2; 
+            const tConst = S_um / V_ums;
+            const tTotal = tAcc * 2 + tConst;
+
+            const printDist = S_um - Y_um - Z_um;
+            const startPosAbs = accDist + Y_um;
+            const endPosAbs = accDist + S_um - Z_um;
+            
+            let pitch = 0, freq = 0;
+            if (X_pts > 1) {
+                pitch = printDist / (X_pts - 1);
+                if (pitch > 0) freq = V_ums / pitch;
+            }
+
+            document.getElementById('res_dist_print').innerText = printDist.toFixed(1) + " um";
+            document.getElementById('res_pos_start').innerText = startPosAbs.toFixed(1) + " um";
+            document.getElementById('res_pos_end').innerText = endPosAbs.toFixed(1) + " um";
+            document.getElementById('res_pitch').innerText = pitch.toFixed(2) + " um";
+            document.getElementById('res_hz').innerText = freq.toFixed(1) + " Hz";
+
+            document.getElementById('res_acc').innerText = acc_mms2.toFixed(2) + " mm/s²";
+            document.getElementById('res_t_acc').innerText = tAcc.toFixed(4) + " s";
+            document.getElementById('res_t_vel').innerText = tConst.toFixed(4) + " s";
+            document.getElementById('res_t_total').innerText = tTotal.toFixed(4) + " s";
+
+            svg.setAttribute('viewBox', `-10 -10 320 120`);
+            const chartW=300, chartH=100;
+            const scaleX = (tTotal > 0) ? chartW / tTotal : 1;
+            const t1 = tAcc * scaleX, t2 = (tAcc + tConst) * scaleX, t3 = tTotal * scaleX;
+            const yBase = chartH, yTop = chartH * 0.2;
+
+            addLine(svg,0,yBase,chartW,yBase,"#333",stroke); addLine(svg,0,yBase,0,0,"#333",stroke);
+            const pathStr = `M0,${yBase} L${t1},${yTop} L${t2},${yTop} L${t3},${yBase}`;
+            const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+            path.setAttribute("d", pathStr); path.setAttribute("fill", "rgba(40,167,69,0.1)"); path.setAttribute("stroke","#28a745"); path.setAttribute("stroke-width", stroke*2);
+            svg.appendChild(path);
+
+            const tStartOffset = (Y_um / V_ums) * scaleX;
+            const tEndOffset = (Z_um / V_ums) * scaleX; 
+            const xStartDraw = t1 + tStartOffset;
+            const xEndDraw = t2 - tEndOffset;
+            
+            addLine(svg, xStartDraw, yTop, xEndDraw, yTop, "red", stroke*3);
+            
+            if(X_pts > 0){
+                const drawWidth = xEndDraw - xStartDraw;
+                const stepPx = (X_pts > 1) ? drawWidth / (X_pts - 1) : 0;
+                const gDots = document.createElementNS("http://www.w3.org/2000/svg","g");
+                for(let i=0; i<X_pts; i++){
+                    let dx = xStartDraw + (X_pts > 1 ? i*stepPx : drawWidth/2);
+                    addCircle(gDots, dx, yTop, 2, "red", null, 0);
+                }
+                svg.appendChild(gDots);
+            }
+            document.getElementById('legend-area').innerHTML = `<div style="font-size:12px; color:#555;">X:時間 Y:速度 <span style="color:red">●:打點範圍</span></div>`;
+        }
+
+        // ================== DRAWING LOGIC WITH OFFSET ==================
         function drawWaferBasedMode(svg, baseStroke, modeType) {
             const dia=getVal('w_dia'), margin=getVal('w_margin');
             const dieW=getVal('w_die_w'), dieH=getVal('w_die_h'), scribe=getVal('w_scribe');
@@ -416,6 +640,9 @@
             svg.setAttribute('viewBox',`-${limit} -${limit} ${limit*2} ${limit*2}`);
             drawAxes(svg,limit,baseStroke); addCircle(svg,0,0,dia*25.4/2,"#ccc",null,baseStroke); addCircle(svg,0,0,radius,"#ff5252","5,2",baseStroke);
 
+            const offX = getVal('g_off_x') / 1000.0;
+            const offY = getVal('g_off_y') / 1000.0;
+
             let validDies=[], rangeX=Math.ceil(radius/gridPitchX), rangeY=Math.ceil(radius/gridPitchY);
             if(rangeX*rangeY<50000){
                 let gp="";
@@ -423,13 +650,14 @@
                     let cx=i*gridPitchX, cy=j*gridPitchY;
                     let l=cx-dieW/2,r=cx+dieW/2,t=cy-dieH/2,b=cy+dieH/2;
                     if(l*l+t*t<=rSq && r*r+t*t<=rSq && l*l+b*b<=rSq && r*r+b*b<=rSq){
-                        if(document.getElementById('v_show_grid').checked) gp+=`M${l.toFixed(2)},${t.toFixed(2)}h${dieW}v${dieH}h-${dieW}z `;
+                        if(document.getElementById('v_show_grid').checked) gp+=`M${(l+offX).toFixed(2)},${(t+offY).toFixed(2)}h${dieW}v${dieH}h-${dieW}z `;
                         let q="Q1"; if(cx>0&&cy<0)q="Q1"; else if(cx<=0&&cy<0)q="Q2"; else if(cx<=0&&cy>=0)q="Q3"; else q="Q4";
                         validDies.push({i,j,cx,cy,q});
                     }
                 }
                 if(gp){let p=document.createElementNS("http://www.w3.org/2000/svg","path"); p.setAttribute("d",gp); p.setAttribute("fill","#e3f2fd"); p.setAttribute("stroke","#2196f3"); p.setAttribute("stroke-width",baseStroke); svg.appendChild(p);}
             }
+            if(modeType === 'wafer') document.getElementById('stat_total_w').innerText = validDies.length;
 
             csvData=[]; const group=document.createElementNS("http://www.w3.org/2000/svg","g");
             let batches = (modeType==='wafer')?[{id:'all',dies:validDies}]:['Q1','Q2','Q3','Q4'].map(q=>({id:q,dies:validDies.filter(d=>d.q===q)}));
@@ -449,23 +677,28 @@
                 let rows=[], cR=[], cJ=b.dies[0].j;
                 b.dies.forEach(d=>{if(d.j!==cJ){rows.push(cR);cR=[];cJ=d.j;}cR.push(d);}); if(cR.length)rows.push(cR);
 
-                let isFIB=true;
                 rows.forEach((row, rIdx)=>{
                     if(trav==='snake' && rIdx%2!==0) row.reverse();
-                    if(trav==='jumpsnake' && rIdx>0 && csvData.length>0){
-                        let last=csvData[csvData.length-1];
-                        let nextStart=(pat==='line')?{x:row[0].cx-len/2,y:row[0].cy}:{x:row[0].cx,y:row[0].cy+len/2};
-                        let sy=(last.y+nextStart.y)/2.0;
+                    
+                    if(rIdx > 0 && csvData.length > 0) {
+                        let last = csvData[csvData.length-1];
+                        let nextStart = (pat==='line') ? {x:row[0].cx-len/2, y:row[0].cy} : {x:row[0].cx, y:row[0].cy+len/2};
+                        
+                        // J-Snake Logic
+                        let nsX = nextStart.x + offX, nsY = nextStart.y + offY;
+                        let sy = (last.y + nsY)/2.0;
                         addLine(group,last.x,last.y,last.x,sy,"red",baseStroke,"4,2");
                         csvData.push({x:last.x,y:sy,f:2,q:b.id});
-                        addLine(group,last.x,sy,nextStart.x,sy,"red",baseStroke,"4,2");
-                        csvData.push({x:nextStart.x,y:sy,f:2,q:b.id});
+                        addLine(group,last.x,sy,nsX,sy,"red",baseStroke,"4,2");
+                        csvData.push({x:nsX,y:sy,f:2,q:b.id});
                     }
 
                     let isFIR=true;
                     row.forEach(die=>{
                         let s,e; if(pat==='line'){s={x:die.cx-len/2,y:die.cy};e={x:die.cx+len/2,y:die.cy};}else{s={x:die.cx,y:die.cy+len/2};e={x:die.cx,y:die.cy-len/2};}
-                        if(trav==='snake' && rIdx%2!==0){ let t=s; s=e; e=t; }
+                        if((trav==='snake') && rIdx%2!==0){let t=s;s=e;e=t;} 
+
+                        s.x+=offX; s.y+=offY; e.x+=offX; e.y+=offY;
 
                         let f=0; if(isFIR) f=2; if(isGF){f=sf;isGF=false;}
                         if(csvData.length>0){
@@ -476,27 +709,29 @@
                         csvData.push({x:s.x,y:s.y,f:f,q:b.id});
                         addLine(group,s.x,s.y,e.x,e.y,"#00c853",baseStroke*3);
                         csvData.push({x:e.x,y:e.y,f:1,q:b.id});
-                        isFIR=false; isFIB=false;
+                        isFIR=false; 
                     });
                 });
             });
             svg.appendChild(group);
         }
 
-        // ================== MODE 2: RECT ==================
         function drawRectMode(svg, baseStroke) {
             const w=getVal('r_w'), h=getVal('r_h'), len=getVal('r_seg_len');
             const px=getVal('r_pitch_x'), py=getVal('r_pitch_y'), startF=getVal('r_start_f');
             const travel=getRadioVal('r_travel'), corner=document.getElementById('r_corner').value;
+            const offX = getVal('g_off_x')/1000.0, offY = getVal('g_off_y')/1000.0;
+
             const limit=Math.max(w,h)*0.6; svg.setAttribute('viewBox',`-${limit} -${limit} ${limit*2} ${limit*2}`);
             drawAxes(svg,limit,baseStroke);
-            let r=document.createElementNS("http://www.w3.org/2000/svg","rect"); r.setAttribute("x",-w/2); r.setAttribute("y",-h/2); r.setAttribute("width",w); r.setAttribute("height",h); r.setAttribute("fill","none"); r.setAttribute("stroke","#ff5252"); r.setAttribute("stroke-dasharray","5,2"); r.setAttribute("stroke-width",baseStroke); svg.appendChild(r);
+            let r=document.createElementNS("http://www.w3.org/2000/svg","rect"); r.setAttribute("x",-w/2+offX); r.setAttribute("y",-h/2+offY); r.setAttribute("width",w); r.setAttribute("height",h); r.setAttribute("fill","none"); r.setAttribute("stroke","#ff5252"); r.setAttribute("stroke-dasharray","5,2"); r.setAttribute("stroke-width",baseStroke); svg.appendChild(r);
 
             csvData=[]; const group=document.createElementNS("http://www.w3.org/2000/svg","g");
             const cX=Math.floor(w/2/px), cY=Math.floor(h/2/py);
-            // Fix Epsilon
+            
             let gridPts=[]; for(let j=-cY; j<=cY; j++) for(let i=-cX; i<=cX; i++) {
-                let cx=i*px, cy=j*py; if(cx-len/2>=-w/2-0.001 && cx+len/2<=w/2+0.001) gridPts.push({cx,cy});
+                let cx=i*px, cy=j*py; 
+                if(cx-len/2>=-w/2-0.001 && cx+len/2<=w/2+0.001 && cy>=-h/2-0.001 && cy<=h/2+0.001) gridPts.push({cx,cy});
             }
             gridPts.sort((a,b)=>{ let dy=(corner==='tl'||corner==='tr')?a.cy-b.cy:b.cy-a.cy; if(Math.abs(dy)>0.001)return dy; return (corner==='tl'||corner==='bl')?a.cx-b.cx:b.cx-a.cx; });
             let rows=[], cR=[], cJ=gridPts[0]?.cy;
@@ -506,14 +741,19 @@
             rows.forEach((row,rIdx)=>{
                 if(travel==='snake'&&rIdx%2!==0)row.reverse();
                 if(travel==='jumpsnake'&&rIdx>0&&csvData.length>0){
-                    let last=csvData[csvData.length-1], next={x:row[0].cx-len/2,y:row[0].cy}, sy=(last.y+next.y)/2.0;
+                    let last=csvData[csvData.length-1], next={x:row[0].cx-len/2+offX,y:row[0].cy+offY}, sy=(last.y+next.y)/2.0;
+                    addLine(group,last.x,last.y,last.x,sy,"red",baseStroke,"4,2"); csvData.push({x:last.x,y:sy,f:2,q:'R'});
+                    addLine(group,last.x,sy,next.x,sy,"red",baseStroke,"4,2"); csvData.push({x:next.x,y:sy,f:2,q:'R'});
+                } else if(travel==='scribesnake'&&rIdx>0&&csvData.length>0){
+                    let last=csvData[csvData.length-1], next={x:row[0].cx-len/2+offX,y:row[0].cy+offY}, sy=(last.y+next.y)/2.0;
                     addLine(group,last.x,last.y,last.x,sy,"red",baseStroke,"4,2"); csvData.push({x:last.x,y:sy,f:2,q:'R'});
                     addLine(group,last.x,sy,next.x,sy,"red",baseStroke,"4,2"); csvData.push({x:next.x,y:sy,f:2,q:'R'});
                 }
+
                 let isFR=true;
                 row.forEach(pt=>{
-                    let s={x:pt.cx-len/2,y:pt.cy}, e={x:pt.cx+len/2,y:pt.cy};
-                    if(travel==='snake'&&rIdx%2!==0){let t=s;s=e;e=t;}
+                    let s={x:pt.cx-len/2+offX,y:pt.cy+offY}, e={x:pt.cx+len/2+offX,y:pt.cy+offY};
+                    if((travel==='snake'||travel==='scribesnake')&&rIdx%2!==0){let t=s;s=e;e=t;}
                     let f=0; if(isFR)f=2; if(isGF){f=startF;isGF=false;}
                     if(csvData.length>0){let last=csvData[csvData.length-1]; let c=f===2?"red":"#999",d=f===2?"4,2":"2,1"; addLine(group,last.x,last.y,s.x,s.y,c,baseStroke,d);}
                     csvData.push({x:s.x,y:s.y,f:f,q:'R'}); addLine(group,s.x,s.y,e.x,e.y,"#00c853",baseStroke*3); csvData.push({x:e.x,y:e.y,f:1,q:'R'}); isFR=false;
@@ -522,11 +762,12 @@
             svg.appendChild(group);
         }
 
-        // ================== MODE 3: ZIGZAG ==================
         function drawZigzagMode(svg, baseStroke) {
             const mx=getVal('z_maxx'), my=getVal('z_maxy'), drop=getVal('z_drop');
             const step=getVal('z_step'), row=getVal('z_row'), startF=getVal('z_start_f');
             const travel=getRadioVal('z_travel'), corner=document.getElementById('z_corner').value;
+            const offX = getVal('g_off_x')/1000.0, offY = getVal('g_off_y')/1000.0;
+
             const limit=10; svg.setAttribute('viewBox',`-${limit} -${my+limit} ${mx+limit*2} ${my+limit*2}`);
             drawAxes(svg, limit, baseStroke); 
             csvData=[]; const group=document.createElementNS("http://www.w3.org/2000/svg","g");
@@ -537,9 +778,14 @@
             let isGF=true;
             rowsY.forEach((y, rIdx)=>{
                 let isRev=(corner==='tr'||corner==='br'); if(travel==='snake'&&rIdx%2!==0)isRev=!isRev;
-                
+                let yOff = y + offY; 
+
                 if(travel==='jumpsnake'&&rIdx>0&&csvData.length>0){
-                    let last=csvData[csvData.length-1], nextX=isRev?mx:0, sy=(last.y+y)/2.0;
+                    let last=csvData[csvData.length-1], nextX=(isRev?mx:0)+offX, sy=(last.y+yOff)/2.0;
+                    addLine(group,last.x,last.y,last.x,sy,"red",baseStroke,"4,2"); csvData.push({x:last.x,y:sy,f:2,q:'Z'});
+                    addLine(group,last.x,sy,nextX,sy,"red",baseStroke,"4,2"); csvData.push({x:nextX,y:sy,f:2,q:'Z'});
+                } else if(travel==='scribesnake'&&rIdx>0&&csvData.length>0){
+                    let last=csvData[csvData.length-1], nextX=(isRev?mx:0)+offX, sy=(last.y+yOff)/2.0;
                     addLine(group,last.x,last.y,last.x,sy,"red",baseStroke,"4,2"); csvData.push({x:last.x,y:sy,f:2,q:'Z'});
                     addLine(group,last.x,sy,nextX,sy,"red",baseStroke,"4,2"); csvData.push({x:nextX,y:sy,f:2,q:'Z'});
                 }
@@ -547,16 +793,16 @@
                 let pts=[]; 
                 if(!isRev){ // L -> R
                     let cx=0; while(cx<mx){
-                        pts.push({x:cx, y:y-drop, f:0}); 
+                        pts.push({x:cx+offX, y:yOff-drop, f:0}); 
                         let nx=cx+step; if(nx>mx) nx=mx; 
-                        pts.push({x:nx, y:y, f:1}); 
+                        pts.push({x:nx+offX, y:yOff, f:1}); 
                         cx=nx; if(cx>=mx && step>0) break;
                     }
                 } else { // R -> L
                     let cx=mx; while(cx>0){
-                        pts.push({x:cx, y:y-drop, f:0}); 
+                        pts.push({x:cx+offX, y:yOff-drop, f:0}); 
                         let nx=cx-step; if(nx<0) nx=0; 
-                        pts.push({x:nx, y:y, f:1}); 
+                        pts.push({x:nx+offX, y:yOff, f:1}); 
                         cx=nx; if(cx<=0 && step>0) break;
                     }
                 }
@@ -564,7 +810,7 @@
                 if(pts.length>0){
                     let sX = pts[0].x; 
                     let f=2; if(isGF) { f=startF; isGF=false; }
-                    let jp = {x:sX, y:y, f:f, q:'Z'};
+                    let jp = {x:sX, y:yOff, f:f, q:'Z'};
                     if(csvData.length>0) { let lp=csvData[csvData.length-1]; addLine(group,lp.x,lp.y,jp.x,jp.y,"red",baseStroke,"4,2"); }
                     csvData.push(jp); let lp=jp;
                     pts.forEach(p=>{
@@ -576,40 +822,36 @@
             svg.appendChild(group);
         }
 
-        // ================== MODE 5: TWO-HALF ==================
         function drawTwoHalfMode(svg, baseStroke) {
-            const dia = getVal('w_dia'); const margin = getVal('w_margin');
-            const radius = (dia * 25.4 - margin) / 2.0;
-            const limit = Math.max(radius * 1.1, 10);
-            svg.setAttribute('viewBox', `-${limit} -${limit} ${limit*2} ${limit*2}`);
+            const dia=getVal('w_dia'), margin=getVal('w_margin');
+            const radius=(dia*25.4-margin)/2.0;
+            const limit=Math.max(radius*1.1,10);
+            svg.setAttribute('viewBox',`-${limit} -${limit} ${limit*2} ${limit*2}`);
             drawAxes(svg, limit, baseStroke);
-            addCircle(svg, 0, 0, dia * 25.4 / 2, "#ccc", null, baseStroke);
-            addCircle(svg, 0, 0, radius, "#ff5252", "5,2", baseStroke);
+            addCircle(svg, 0, 0, dia*25.4/2,"#ccc",null,baseStroke);
+            addCircle(svg, 0, 0, radius,"#ff5252","5,2",baseStroke);
 
-            csvData = [];
-            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            const startF = getVal('h_start_f');
-            const step = getVal('h_step'); const row = getVal('h_row'); const drop = getVal('h_drop');
-            const len = getVal('w_seg_len'); 
+            const offX = getVal('g_off_x')/1000.0, offY = getVal('g_off_y')/1000.0;
+
+            csvData=[]; const group=document.createElementNS("http://www.w3.org/2000/svg","g");
+            const startF=getVal('h_start_f'), step=getVal('h_step'), row=getVal('h_row'), drop=getVal('h_drop'), len=getVal('w_seg_len'); 
 
             const halves = [
                 { id: 'Top', w: getVal('h_top_w'), h: getVal('h_top_h'), off: getVal('h_top_off'), mode: document.getElementById('h_top_mode').value, cy: -getVal('h_top_off') - getVal('h_top_h')/2 },
                 { id: 'Bot', w: getVal('h_bot_w'), h: getVal('h_bot_h'), off: getVal('h_bot_off'), mode: document.getElementById('h_bot_mode').value, cy: getVal('h_bot_off') + getVal('h_bot_h')/2 }
             ];
 
-            let isGlobalFirst = true;
-
+            let isGF=true;
             halves.forEach(half => {
                 if (half.mode === 'none') return;
                 let r = document.createElementNS("http://www.w3.org/2000/svg","rect");
-                r.setAttribute("x", -half.w/2); r.setAttribute("y", half.cy - half.h/2);
+                r.setAttribute("x", -half.w/2 + offX); r.setAttribute("y", half.cy - half.h/2 + offY);
                 r.setAttribute("width", half.w); r.setAttribute("height", half.h);
                 r.setAttribute("fill", "none"); r.setAttribute("stroke", "#ff9800"); r.setAttribute("stroke-dasharray", "5,2");
                 svg.appendChild(r);
 
                 const xMin = -half.w/2, xMax = half.w/2;
                 const yMin = half.cy - half.h/2, yMax = half.cy + half.h/2;
-                
                 let rIdx = 0;
                 for (let y = yMin; y <= yMax; y += row) {
                     let rowPts = [];
@@ -619,53 +861,46 @@
                         for(let i=0; i<=xCount; i++) {
                             let cx = startX + i*step;
                             if (cx - len/2 >= xMin && cx + len/2 <= xMax) {
-                                rowPts.push({x: cx - len/2, y: y, f: 2}); 
-                                rowPts.push({x: cx + len/2, y: y, f: 1});
+                                rowPts.push({x: cx - len/2 + offX, y: y + offY, f: 2}); 
+                                rowPts.push({x: cx + len/2 + offX, y: y + offY, f: 1});
                             }
                         }
                         if (rIdx % 2 !== 0) {
                             let newPts = [];
                             for(let k=rowPts.length-2; k>=0; k-=2) {
-                                newPts.push({x: rowPts[k+1].x, y: y, f: 2});
-                                newPts.push({x: rowPts[k].x, y: y, f: 1});
+                                newPts.push({x: rowPts[k+1].x, y: y+offY, f: 2}); newPts.push({x: rowPts[k].x, y: y+offY, f: 1});
                             }
                             rowPts = newPts;
                         }
-                    } else {
-                        let isRev = (rIdx % 2 !== 0);
-                        let points = [];
-                        if (!isRev) { // L -> R
+                    } else { // Zigzag
+                        let isRev = (rIdx % 2 !== 0); let points = [];
+                        if (!isRev) { 
                             let cx = xMin;
                             while(cx < xMax) {
-                                points.push({x: cx, y: y - drop, f: 0}); // Move Up
-                                let nx = cx + step; if(nx > xMax) nx = xMax; // Clamp Next
-                                points.push({x: nx, y: y, f: 1}); // Disp Down
-                                cx = nx; if(cx >= xMax && step > 0) break;
+                                points.push({x: cx+offX, y: y+offY - drop, f: 0}); 
+                                let nx = cx + step; if(nx > xMax) nx = xMax; 
+                                points.push({x: nx+offX, y: y+offY, f: 1}); cx = nx; if(cx >= xMax && step > 0) break;
                             }
-                        } else { // R -> L
+                        } else { 
                             let cx = xMax;
                             while(cx > xMin) {
-                                points.push({x: cx, y: y - drop, f: 0}); // Move Up
-                                let nx = cx - step; if(nx < xMin) nx = xMin; // Clamp Next
-                                points.push({x: nx, y: y, f: 1}); // Disp Down
-                                cx = nx; if(cx <= xMin && step > 0) break;
+                                points.push({x: cx+offX, y: y+offY - drop, f: 0}); 
+                                let nx = cx - step; if(nx < xMin) nx = xMin; 
+                                points.push({x: nx+offX, y: y+offY, f: 1}); cx = nx; if(cx <= xMin && step > 0) break;
                             }
                         }
                         if (points.length > 0) {
-                            let startX = points[0].x;
-                            rowPts.push({x: startX, y: y, f: 2}); // Anchor Jump
-                            points.forEach(p => rowPts.push(p));
+                            rowPts.push({x: points[0].x, y: y+offY, f: 2}); points.forEach(p => rowPts.push(p));
                         }
                     }
 
                     if (rowPts.length > 0) {
-                        if (isGlobalFirst) { rowPts[0].f = startF; isGlobalFirst = false; }
+                        if (isGF) { rowPts[0].f = startF; isGF = false; }
                         if (csvData.length > 0) {
                             let last = csvData[csvData.length-1]; let start = rowPts[0];
                             addLine(group, last.x, last.y, start.x, start.y, "red", baseStroke, "4,2");
                         }
-                        let lp = rowPts[0];
-                        csvData.push({...lp, q: half.id}); 
+                        let lp = rowPts[0]; csvData.push({...lp, q: half.id}); 
                         for(let k=1; k<rowPts.length; k++) {
                             let p = rowPts[k];
                             let col=p.f===1?"#007ACC":"#999", w=p.f===1?baseStroke*1.5:baseStroke, d=p.f===0?"2,1":null;
@@ -698,7 +933,7 @@
             a.href=URL.createObjectURL(b); a.download=`${currentMode}_preview.svg`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
         function drawAxes(p,l,s){ addLine(p,-l,0,l,0,"#aaa",s); addLine(p,0,-l,0,l,"#aaa",s); }
-        function addCircle(p,x,y,r,s,d,w){ const c=document.createElementNS("http://www.w3.org/2000/svg","circle"); c.setAttribute("cx",x); c.setAttribute("cy",y); c.setAttribute("r",r); c.setAttribute("fill","none"); c.setAttribute("stroke",s); if(d) c.setAttribute("stroke-dasharray",d); if(w!==null) c.setAttribute("stroke-width",w); p.appendChild(c); }
+        function addCircle(p,x,y,r,s,d,w){ const c=document.createElementNS("http://www.w3.org/2000/svg","circle"); c.setAttribute("cx",x); c.setAttribute("cy",y); c.setAttribute("r",r); c.setAttribute("fill",s==="red"?"red":"none"); c.setAttribute("stroke",s==="red"?"none":s); if(d) c.setAttribute("stroke-dasharray",d); if(w!==null) c.setAttribute("stroke-width",w); p.appendChild(c); }
         function addLine(p,x1,y1,x2,y2,c,w,d){ const l=document.createElementNS("http://www.w3.org/2000/svg","line"); l.setAttribute("x1",x1); l.setAttribute("y1",y1); l.setAttribute("x2",x2); l.setAttribute("y2",y2); l.setAttribute("stroke",c); l.setAttribute("stroke-width",w); if(d) l.setAttribute("stroke-dasharray",d); p.appendChild(l); }
 
         window.onload = function() { setMode('wafer'); };
