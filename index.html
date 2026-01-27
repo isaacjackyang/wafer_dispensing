@@ -1,579 +1,569 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wafer Tool v38 (AR Player Settings)</title>
-  <style>
-    :root{
-      --bg:#f4f4f9; --panel:#fff; --text:#333; --border:#ddd;
-      --primary:#007ACC; --accent:#ff9800; --canvas:#fff;
-    }
-    body{
-      font-family:"Segoe UI",sans-serif; background:var(--bg); margin:0; height:100vh;
-      display:flex; flex-direction:column; overflow:hidden; color:var(--text);
-    }
-    .header{
-      height:40px; background:var(--panel); border-bottom:1px solid var(--border);
-      display:flex; align-items:center; padding:0 15px; font-weight:bold; flex-shrink:0; justify-content:space-between;
-    }
-    .container{ display:flex; flex:1; overflow:hidden; }
-    .sidebar{
-      width:400px; background:var(--panel); border-right:1px solid var(--border);
-      display:flex; flex-direction:column; padding:15px; overflow-y:auto; z-index:20;
-      box-shadow:2px 0 5px rgba(0,0,0,0.05);
-    }
-    .main-view{ flex:1; display:flex; flex-direction:column; position:relative; background:#e0e0e0; }
-    #canvas-window{
-      flex:1; position:relative; overflow:hidden; cursor:crosshair; background:var(--canvas);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wafer Viewer v61 (Export Anchor)</title>
+    <style>
+        /* --- 樣式設定 --- */
+        :root {
+            --bg-body: #f4f4f9; --panel: #fff; --text: #333; --border: #ccc;
+            --primary: #007ACC; --accent: #009688; --canvas: #e0e0e0;
+        }
+        [data-theme="dark"] {
+            --bg-body: #1e1e1e; --panel: #2d2d2d; --text: #eee; --border: #444;
+            --primary: #4fc3f7; --accent: #80cbc4; --canvas: #121212;
+        }
+        
+        body { font-family: "Segoe UI", sans-serif; background: var(--bg-body); color: var(--text); margin: 0; height: 100vh; width: 100vw; display: flex; flex-direction: column; overflow: hidden; }
+        .header { height: 40px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 15px; font-weight: bold; flex-shrink: 0; justify-content: space-between; }
+        .container { display: flex; flex: 1; height: calc(100vh - 40px); overflow: hidden; }
+        
+        .sidebar { width: 360px; min-width: 360px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 10px; overflow-y: auto; gap: 10px; flex-shrink: 0; z-index: 20; }
+        .right-panel { flex: 1; display: flex; flex-direction: column; background: var(--canvas); position: relative; min-width: 0; }
+        
+        #canvas-wrapper { flex: 1; position: relative; overflow: hidden; cursor: default; width: 100%; height: 100%; }
+        canvas { display: block; width: 100%; height: 100%; }
 
-    #world{ position:absolute; top:0; left:0; width:0; height:0; transform-origin:0 0; will-change:transform; }
-    .layer{ position:absolute; top:0; left:0; overflow:visible; }
-    #layer-video{ width:640px; height:480px; top:0; left:0; opacity:0.5; pointer-events:none; display:none; transform-origin:0 0; z-index:0; }
-    #layer-grid{ width:100000px; height:100000px; pointer-events:none; z-index:1; }
-    #layer-draw{ width:100000px; height:100000px; pointer-events:none; z-index:2; }
+        .footer { height: 140px; min-height: 140px; background: var(--panel); border-top: 1px solid var(--border); padding: 10px; display: flex; gap: 10px; overflow-x: auto; flex-shrink: 0; z-index: 30; }
+        .card { flex: 1; min-width: 160px; border: 1px solid var(--border); border-radius: 4px; padding: 5px 10px; background: rgba(0,0,0,0.02); display: flex; flex-direction: column; overflow: hidden; }
+        .card-content { flex: 1; overflow-y: auto; }
+        .card-t { font-size: 12px; font-weight: bold; color: var(--primary); border-bottom: 1px dashed #ccc; margin-bottom: 5px; flex-shrink: 0;}
+        .row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 2px; }
+        .val { font-weight: bold; font-family: monospace; }
 
-    .footer{
-      height:140px; background:var(--panel); border-top:1px solid var(--border);
-      padding:10px 20px; display:flex; gap:15px; z-index:30; flex-shrink:0;
-    }
-    .card{
-      flex:1; border:1px solid var(--border); border-radius:6px; padding:8px;
-      background:#fafafa; display:flex; flex-direction:column; justify-content:center;
-    }
-    .card-t{ font-size:12px; font-weight:bold; color:var(--primary); border-bottom:1px dashed #ccc; margin-bottom:5px; }
-    .row{ display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; }
-    .val{ font-weight:bold; font-family:monospace; }
+        .sec-title { font-size: 13px; font-weight: bold; border-left: 3px solid var(--primary); padding-left: 6px; margin: 10px 0 5px 0; color: var(--text); }
+        .in-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 12px; }
+        input[type=number], select, input[type=text] { width: 90px; text-align: right; padding: 2px; border: 1px solid #ccc; border-radius: 3px; background: var(--panel); color: var(--text); }
+        input[type=file] { width: 100%; font-size: 11px; }
+        input[type=checkbox], input[type=radio] { cursor: pointer; }
+        
+        .btn-grp { display: flex; gap: 5px; margin-top: 10px; }
+        button.act-btn { flex: 1; padding: 8px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; font-size: 12px; transition: 0.2s; }
+        .bg-blue { background: var(--primary); } .bg-green { background: #28a745; } .bg-accent { background: var(--accent); } .bg-gray { background: #666; }
+        button.act-btn:hover { filter: brightness(1.1); }
 
-    .sec-title{ font-size:13px; font-weight:bold; color:#555; border-left:3px solid var(--primary); padding-left:6px; margin:15px 0 5px 0; }
-    .in-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:13px; }
-    input[type=number], select{ width:80px; text-align:right; padding:3px; border:1px solid #ccc; border-radius:3px; }
-    input[type=range]{ flex:1; margin-left:10px; cursor: pointer; }
-    button{
-      flex:1; padding:6px; border:none; border-radius:4px; cursor:pointer; color:white;
-      font-weight:bold; font-size:12px; transition:0.2s;
-    }
-    button:hover{ opacity:0.9; }
-    .btn-grp{ display:flex; gap:5px; margin-top:10px; }
-    .bg-blue{ background:var(--primary); } .bg-green{ background:#28a745; } .bg-red{ background:#dc3545; } .bg-gray{ background:#666; color:white; }
-
-    .mode-tabs{ display:flex; gap:5px; margin-bottom:10px; }
-    .tab{
-      flex:1; padding:8px; text-align:center; border:1px solid #ccc; cursor:pointer;
-      border-radius:4px; font-size:13px; background:#eee;
-    }
-    .tab.active{ background:var(--primary); color:white; border-color:var(--primary); }
-
-    .overlay{
-      position:absolute; top:10px; left:50%; transform:translateX(-50%);
-      background:rgba(255,255,255,0.9); padding:5px 15px; border-radius:20px;
-      box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; gap:10px; z-index:50;
-    }
-    .help-box{
-      position:absolute; bottom:10px; right:10px; width:150px;
-      background:rgba(255,255,255,0.9); padding:10px; border-radius:8px;
-      box-shadow:0 2px 10px rgba(0,0,0,0.1); font-size:11px; z-index:50;
-      display:none; border:1px solid #ccc;
-    }
-
-    .g-param{ display:none; }
-    
-    /* 播放器與設定框樣式 */
-    .player-ctrl { background: #fff3e0; padding: 8px; border-radius: 6px; border: 1px solid #ffcc80; margin-top: 10px; }
-    .sim-setting { background: #e3f2fd; padding: 8px; border-radius: 6px; border: 1px solid #90caf9; margin-top: 5px; }
-    
-    path, line, circle, rect { vector-effect: non-scaling-stroke; }
-  </style>
+        .overlay { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.9); padding: 5px 15px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 50; border: 1px solid #ccc; display: flex; gap:10px; }
+        .overlay button { background:none; border:none; cursor:pointer; font-weight:bold; color:#333; font-size:13px; }
+        .map-box { background: rgba(0,122,204,0.05); padding: 5px; border: 1px solid var(--primary); border-radius: 4px; margin-bottom: 5px; }
+    </style>
 </head>
+<body data-theme="light">
 
-<body>
-  <div class="header">
-    <span>Wafer Tool v38 <small style="font-weight:normal;color:#666;">(Player Settings)</small></span>
-  </div>
-
-  <div class="container">
-    <div class="sidebar">
-      <div class="mode-tabs">
-        <div class="tab" id="tab-1" onclick="setMode(1)">1. 晶圓自動生成</div>
-        <div class="tab" id="tab-2" onclick="setMode(2)">2. 手繪 AR 模式</div>
-      </div>
-
-      <div id="common-ui">
-        <div class="sec-title">全域顯示 (Global)</div>
-        <div class="in-row"><label>線條粗細 (px)</label><input type="number" id="v_stroke" value="0.1" step="0.1" onchange="render()"></div>
-        <div class="in-row"><label><input type="checkbox" id="v_grid" checked onchange="render()"> 顯示晶片網格</label></div>
-        <div class="in-row"><label>Offset X (µm)</label><input type="number" id="off_x" value="0" onchange="render()"></div>
-        <div class="in-row"><label>Offset Y (µm)</label><input type="number" id="off_y" value="0" onchange="render()"></div>
-
-        <div class="sec-title">運動參數 (Motion)</div>
-        <div class="in-row"><label>作業速 (mm/s)</label><input type="number" id="spd_w" value="30" onchange="render()"></div>
-        <div class="in-row"><label>快移速 (mm/s)</label><input type="number" id="spd_j" value="50" onchange="render()"></div>
-        <div class="in-row"><label>加減速 (s)</label><input type="number" id="t_acc" value="0.017" step="0.001" onchange="render()"></div>
-      </div>
-
-      <div id="p-m1" class="g-param">
-        <div class="sec-title">晶圓設定 (Wafer)</div>
-        <div class="in-row"><label>直徑 (in)</label><input type="number" id="w_dia" value="8.0" onchange="render()"></div>
-        <div class="in-row"><label>內縮 (mm)</label><input type="number" id="w_margin" value="5.0" onchange="render()"></div>
-        <div class="in-row"><label>晶片 X (mm)</label><input type="number" id="w_dx" value="1.645" onchange="render()"></div>
-        <div class="in-row"><label>晶片 Y (mm)</label><input type="number" id="w_dy" value="0.945" onchange="render()"></div>
-        <div class="in-row"><label>切割道 (mm)</label><input type="number" id="w_sc" value="0.055" step="0.001" onchange="render()"></div>
-        <div class="in-row"><label>線段長 (mm)</label><input type="number" id="w_seg" value="0.4" onchange="render()"></div>
-
-        <div class="sec-title">策略 (Strategy)</div>
-        <div class="in-row"><label>起點</label><select id="m1_corn" onchange="render()"><option value="tl">TL (左上)</option><option value="tr">TR</option><option value="bl">BL</option><option value="br">BR</option></select></div>
-        <div class="in-row"><label>類型</label><select id="m1_pat" onchange="render()"><option value="line">Line (線段)</option><option value="zigzag">Zig (Z字)</option></select></div>
-        <div class="in-row"><label>方式</label><select id="m1_trav" onchange="render()"><option value="snake">Snake (蛇行)</option><option value="jump">Jump (跳躍)</option></select></div>
-        <div class="in-row" style="margin-top:10px;background:#e3f2fd;padding:5px;"><label>晶片數:</label><span id="m1_cnt" style="font-weight:bold;">0</span></div>
-      </div>
-
-      <div id="p-m2" class="g-param">
-        <div class="sec-title">手繪設定 (Manual AR)</div>
-        <div class="in-row"><label>Webcam</label><span><button class="bg-green" style="width:40px;" onclick="startCam()">ON</button> <button class="bg-red" style="width:40px;" onclick="stopCam()">OFF</button></span></div>
-        <div class="in-row"><label>Cam透明度</label><input type="range" id="m2_op" min="0" max="1" step="0.1" value="0.5" oninput="updCam()"></div>
-        <div class="in-row"><label>校正 (Px/mm)</label><input type="number" id="m2_sc" value="10" onchange="renderManual()"></div>
-
-        <div class="sec-title">網格與工具</div>
-        <div class="in-row"><label><input type="checkbox" id="m2_gen" checked onchange="renderManual()"> 顯示網格</label><input type="number" id="m2_gp" value="10" style="width:50px;" onchange="renderManual()"></div>
-        <div class="in-row"><label><input type="checkbox" id="m2_ortho"> 正交 (Shift)</label></div>
-        <div class="in-row"><label>類型</label><select id="m2_type"><option value="1">Disp (噴塗)</option><option value="0">Move (移動)</option><option value="2">Jump (快移)</option></select></div>
-        
-        <button class="bg-red" style="width:100%;margin-top:10px;" onclick="clearManual()">清除畫布</button>
-
-        <div class="player-ctrl">
-            <div style="font-size:12px; font-weight:bold; color:var(--accent); margin-bottom:5px;">路徑預覽 (Preview)</div>
-            <div class="in-row">
-                <button class="bg-green" onclick="playSim()" id="btn_play">▶ 播放</button>
-                <button class="bg-red" onclick="stopSim()">■ 停止</button>
-            </div>
-            <div class="in-row">
-                <label>進度</label>
-                <input type="range" id="sim_progress" min="0" max="100" value="0" step="0.1" oninput="seekSim(this.value)">
-            </div>
-            <div class="in-row">
-                <label>速度</label>
-                <input type="range" id="sim_speed" min="1" max="50" value="5">
-                <span id="sim_spd_val" style="font-size:11px; width:30px; text-align:right;">5x</span>
-            </div>
-        </div>
-
-        <div class="sim-setting">
-            <div style="font-size:12px; font-weight:bold; color:#007ACC; margin-bottom:5px;">模擬點設定 (Sim Head)</div>
-            <div class="in-row">
-                <label>大小 (Size)</label>
-                <input type="range" id="sim_size" min="1" max="30" value="6" oninput="updateSimMarker()">
-            </div>
-            <div class="in-row">
-                <label>透明 (Opacity)</label>
-                <input type="range" id="sim_alpha" min="0.1" max="1.0" step="0.1" value="0.8" oninput="updateSimMarker()">
-            </div>
-        </div>
-      </div>
-
-      <div class="btn-grp">
-        <button class="bg-blue" onclick="dlSVG()">下載 SVG</button>
-        <button class="bg-green" onclick="dlCSV()">下載 CSV</button>
-      </div>
+    <div class="header">
+        <span>Wafer Viewer v61 <span style="font-size:11px; background:var(--accent); color:white; padding:2px 5px; border-radius:3px;">Export Anchor</span></span>
+        <button onclick="document.body.setAttribute('data-theme', document.body.getAttribute('data-theme')==='light'?'dark':'light'); render();" style="background:transparent; border:1px solid #ccc; padding:2px 8px; border-radius:4px; cursor:pointer; color:inherit;">🌗</button>
     </div>
 
-    <div class="main-view">
-      <div id="canvas-window">
-        <div class="overlay">
-          <button class="bg-gray" style="background:none;color:#333;border:1px solid #ccc;" onclick="render()">🔄 更新</button>
-          <button class="bg-gray" style="background:none;color:#333;border:1px solid #ccc;" onclick="autoFit()">⛶ 置中</button>
+    <div class="container">
+        <div class="sidebar">
+            <div class="map-box">
+                <div class="sec-title" style="margin-top:0;">1. 匯入 Mapping (TXT)</div>
+                <input type="file" id="map-file" accept=".txt" onchange="handleMapUpload(this)">
+                <div id="map-status" style="font-size:11px; margin-top:5px; color:#666;">未載入</div>
+                <div class="in-row" style="margin-top:8px;">
+                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--primary); font-weight:bold;">
+                        <input type="checkbox" id="auto_est" checked> 自動估算尺寸
+                    </label>
+                </div>
+                <div class="in-row">
+                    <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+                        <input type="checkbox" id="map_show_text" onchange="render()"> 顯示代碼 (Text)
+                    </label>
+                </div>
+            </div>
+
+            <div class="sec-title">2. 晶圓參數</div>
+            <div class="in-row"><label>直徑 (in)</label><input type="number" id="w_dia" value="8.0" onchange="updateGeometry()"></div>
+            <div class="in-row" style="background:#e8f5e9;"><label>晶片 X (mm)</label><input type="number" id="w_dx" value="0.932" onchange="updateGeometry()"></div>
+            <div class="in-row" style="background:#e8f5e9;"><label>晶片 Y (mm)</label><input type="number" id="w_dy" value="1.632" onchange="updateGeometry()"></div>
+            <div class="in-row" style="background:#e8f5e9;"><label>切割道 (mm)</label><input type="number" id="w_sc" value="0.08" step="0.001" onchange="updateGeometry()"></div>
+            
+            <div class="sec-title">3. 顯示微調</div>
+            <div class="in-row"><label>Map Shift X</label><input type="number" id="map_off_x" value="0" onchange="updateGeometry()"></div>
+            <div class="in-row"><label>Map Shift Y</label><input type="number" id="map_off_y" value="0" onchange="updateGeometry()"></div>
+            <div class="in-row"><label>線條粗細</label><input type="number" id="v_stroke" value="0.02" step="0.01" onchange="render()"></div>
+            
+            <div class="in-row" style="justify-content: flex-start; gap: 10px; margin-top:8px;">
+                <label style="font-size:12px; cursor:pointer;"><input type="radio" name="align_visual" value="die" checked onchange="updateGeometry()"> 晶片中心</label>
+                <label style="font-size:12px; cursor:pointer;"><input type="radio" name="align_visual" value="scribe" onchange="updateGeometry()"> 切割道中心</label>
+            </div>
+
+            <div class="map-box" style="border-color:var(--accent); background:rgba(0, 150, 136, 0.05); margin-top:15px;">
+                <div class="sec-title" style="margin-top:0; color:var(--accent);">4. 最小外接圓 (SEC)</div>
+                <div class="in-row"><label>Center X:</label><span id="calc_cx" class="val">0.00</span></div>
+                <div class="in-row"><label>Center Y:</label><span id="calc_cy" class="val">0.00</span></div>
+                <div class="in-row"><label>Radius:</label><span id="calc_r" class="val">0.00</span></div>
+                <button class="act-btn bg-accent" style="width:100%; margin-top:5px;" onclick="updateGeometry()">⟳ 重新計算圓心</button>
+            </div>
+
+            <div class="sec-title" style="border-color:#e91e63;">5. 匯出設定 (CSV)</div>
+            <div class="in-row">
+                <label>全域原點:</label>
+                <select id="csv_global_origin">
+                    <option value="center">Wafer Center (0,0)</option>
+                    <option value="ref_r">Leftmost 'R' (0,0)</option>
+                </select>
+            </div>
+            <div class="in-row">
+                <label>參考點位置:</label>
+                <select id="csv_die_anchor" style="font-weight:bold; color:#007ACC;">
+                    <option value="center">晶片中心 (Center)</option>
+                    <option value="TL">左上 (Top-Left)</option>
+                    <option value="TR">右上 (Top-Right)</option>
+                    <option value="BL">左下 (Bot-Left)</option>
+                    <option value="BR">右下 (Bot-Right)</option>
+                </select>
+            </div>
+
+            <div class="btn-grp" style="margin-top:20px;">
+                <button class="act-btn bg-blue" onclick="dlSVG()">下載 SVG</button>
+                <button class="act-btn bg-green" onclick="dlCSV()">匯出 CSV</button>
+            </div>
         </div>
 
-        <div id="world">
-          <video id="layer-video" autoplay playsinline muted class="layer"></video>
+        <div class="right-panel">
+            <div id="canvas-wrapper">
+                <canvas id="mainCanvas"></canvas>
+                <div class="overlay">
+                    <button onclick="autoFit()">⛶ Auto Fit</button>
+                </div>
+            </div>
 
-          <svg id="layer-grid" class="layer" xmlns="http://www.w3.org/2000/svg" viewBox="-50000 -50000 100000 100000">
-            <defs>
-              <pattern id="gridPat" width="100" height="100" patternUnits="userSpaceOnUse">
-                <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#ccc" stroke-width="1"/>
-              </pattern>
-            </defs>
-            <rect id="gridRect" x="-50000" y="-50000" width="100000" height="100000" fill="url(#gridPat)"/>
-          </svg>
-
-          <svg id="layer-draw" class="layer" xmlns="http://www.w3.org/2000/svg" viewBox="-50000 -50000 100000 100000"></svg>
+            <div class="footer">
+                <div class="card">
+                    <div class="card-t">邊界分析 (Boundary)</div>
+                    <div class="row"><span>8吋標準圓:</span><span class="val" id="res_dia">200.00</span></div>
+                    <div class="row"><span>最小外接圓:</span><span class="val" id="res_outer">0.00</span></div>
+                    <div class="row" style="color:red;"><span>內縮 Margin:</span><span class="val" id="res_margin">0.00</span></div>
+                </div>
+                <div class="card" style="flex:2;">
+                    <div class="card-t">數量統計 (Dynamic)</div>
+                    <div class="card-content" id="stats_container"><div style="font-size:11px; color:#888;">請匯入...</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-t">圖例</div>
+                    <div class="row"><span style="color:#4caf50">■ X: Good</span></div>
+                    <div class="row"><span style="color:#ff9800">■ ID: Edge</span></div>
+                    <div class="row"><span style="color:#009688">■ O: SEC</span></div>
+                </div>
+            </div>
         </div>
-
-        <div class="help-box" id="manual-help">
-          <b>操作指南:</b>
-          <ul><li>左鍵: 新增</li><li>拖曳: 移動</li><li>右鍵: 刪除</li><li>滾輪: 縮放</li><li>中鍵: 平移</li></ul>
-        </div>
-      </div>
-
-      <div class="footer">
-        <div class="card">
-          <div class="card-t">總覽 (Totals)</div>
-          <div class="row"><span>距離:</span><span class="val" id="res_dist">0.00 m</span></div>
-          <div class="row"><span>時間:</span><span class="val" id="res_time_s">0.00 s</span></div>
-          <div class="row"><span>線段:</span><span class="val" id="res_segs">0</span></div>
-          <div style="font-size:18px;color:var(--accent);text-align:center;margin-top:5px;font-weight:bold;" id="res_time">0:00</div>
-        </div>
-        <div class="card" style="flex:2;">
-          <div class="card-t">明細 (Details)</div>
-          <div class="row" style="color:#28a745;"><span>■ 噴塗 (F1)</span><span class="val" id="det_f1">0 m | 0 s</span></div>
-          <div class="row" style="color:#dc3545;"><span>■ 快移 (F2)</span><span class="val" id="det_f2">0 m | 0 s</span></div>
-          <div class="row" style="color:#666;"><span>■ 移動 (F0)</span><span class="val" id="det_f0">0 m | 0 s</span></div>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <script>
-    const ORG = 50000;
-    let mode = 1;
-    let pathData = []; 
-    let manPts = []; 
-
-    let view = { x: 0, y: 0, s: 1.0 };
-    let isPan = false, startX = 0, startY = 0;
-    let drag = { active: false, idx: -1 };
-    let stream = null;
-
-    let simState = {
-        playing: false,
-        idx: 0, 
-        reqId: null
-    };
-
-    window.onload = () => {
-      initEvents();
-      setMode(1);
-      setTimeout(autoFit, 100);
-      window.addEventListener('resize', () => autoFit());
-      document.getElementById('sim_speed').oninput = function() {
-          document.getElementById('sim_spd_val').innerText = this.value + 'x';
-      };
-    };
-
-    function applyViewBoxForMode() {
-      const grid = document.getElementById('layer-grid');
-      const draw = document.getElementById('layer-draw');
-      const gridRect = document.getElementById('gridRect');
-      const vb = (mode===1) ? `-${ORG} -${ORG} ${ORG*2} ${ORG*2}` : `0 0 ${ORG*2} ${ORG*2}`;
-      const xy = (mode===1) ? -ORG : 0;
-      grid.setAttribute('viewBox', vb);
-      draw.setAttribute('viewBox', vb);
-      gridRect.setAttribute('x', xy); gridRect.setAttribute('y', xy);
-    }
-
-    function setMode(id) {
-      stopSim(); 
-      mode = id;
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.getElementById(`tab-${id}`).classList.add('active');
-      document.getElementById('p-m1').style.display = (id === 1) ? 'block' : 'none';
-      document.getElementById('p-m2').style.display = (id === 2) ? 'block' : 'none';
-      const isMan = (id === 2);
-      document.getElementById('manual-help').style.display = isMan ? 'block' : 'none';
-      document.getElementById('layer-video').style.display = isMan ? 'block' : 'none';
-      applyViewBoxForMode();
-      if (isMan) { startCam(); updCam(); renderManual(); } else { stopCam(); render(); }
-      autoFit();
-    }
-
-    function getVal(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
-    function getStr(id) { return document.getElementById(id)?.value || ""; }
-
-    function initEvents() {
-      const win = document.getElementById('canvas-window');
-      win.addEventListener('wheel', e => {
-        e.preventDefault();
-        const d = e.deltaY > 0 ? 0.9 : 1.1;
-        const rect = win.getBoundingClientRect();
-        const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-        const ns = view.s * d;
-        view.x = mx - (mx - view.x) * (ns / view.s);
-        view.y = my - (my - view.y) * (ns / view.s);
-        view.s = ns;
-        updWorld();
-        if(mode===2) renderManual(); 
-      });
-      win.addEventListener('mousedown', e => {
-        if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
-          isPan = true; startX = e.clientX; startY = e.clientY;
-          win.style.cursor = 'grabbing'; e.preventDefault();
-        } else if (e.button === 0 && mode === 2) onManDown(e);
-      });
-      window.addEventListener('mousemove', e => {
-        if (isPan) {
-          view.x += (e.clientX - startX); view.y += (e.clientY - startY);
-          startX = e.clientX; startY = e.clientY; updWorld();
-        } else if (mode === 2 && drag.active) onManMove(e);
-      });
-      window.addEventListener('mouseup', () => { isPan = false; drag.active = false; win.style.cursor = (mode===2)?'crosshair':'default'; });
-      win.addEventListener('contextmenu', e => { if (mode === 2) { e.preventDefault(); onManRight(e); } });
-    }
-
-    function updWorld() { document.getElementById('world').style.transform = `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.s})`; }
-
-    function autoFit() {
-      const win = document.getElementById('canvas-window');
-      const w = win.clientWidth, h = win.clientHeight;
-      if (mode === 1) {
-        const dia = getVal('w_dia') * 25.4 || 200;
-        view.s = Math.min(w / (dia * 1.2), h / (dia * 1.2));
-        view.x = (w / 2) - (ORG * view.s); view.y = (h / 2) - (ORG * view.s);
-      } else {
-        view.x = 0; view.y = 0; view.s = 1.0;
-      }
-      updWorld();
-    }
-
-    // ===== Playback =====
-    function playSim() {
-        if(pathData.length < 2) return;
-        if(simState.playing) {
-            simState.playing = false; cancelAnimationFrame(simState.reqId);
-            document.getElementById('btn_play').innerText = "▶ 播放";
-        } else {
-            if(simState.idx >= pathData.length - 1) simState.idx = 0;
-            simState.playing = true;
-            document.getElementById('btn_play').innerText = "⏸ 暫停";
-            simLoop();
-        }
-    }
-    function stopSim() {
-        simState.playing = false; cancelAnimationFrame(simState.reqId);
-        simState.idx = 0;
-        document.getElementById('btn_play').innerText = "▶ 播放";
-        document.getElementById('sim_progress').value = 0;
-        updateSimMarker();
-    }
-    function seekSim(val) {
-        if(pathData.length < 2) return;
-        simState.idx = (val / 100) * (pathData.length - 1);
-        updateSimMarker();
-    }
-    function simLoop() {
-        if(!simState.playing) return;
-        const speed = parseFloat(document.getElementById('sim_speed').value) * 0.05;
-        simState.idx += speed;
-        if(simState.idx >= pathData.length - 1) { simState.idx = pathData.length - 1; stopSim(); return; }
-        document.getElementById('sim_progress').value = (simState.idx / (pathData.length - 1)) * 100;
-        updateSimMarker();
-        simState.reqId = requestAnimationFrame(simLoop);
-    }
-    
-    // --- Updated Sim Marker Logic ---
-    function updateSimMarker() {
-        const marker = document.getElementById('sim-head');
-        if(!marker || pathData.length < 1) return;
-
-        const i = Math.floor(simState.idx);
-        const t = simState.idx - i;
-        const p1 = pathData[i];
-        const p2 = pathData[Math.min(i+1, pathData.length-1)];
-
-        const cx = p1.x + (p2.x - p1.x) * t;
-        const cy = p1.y + (p2.y - p1.y) * t;
-
-        marker.setAttribute('cx', cx);
-        marker.setAttribute('cy', cy);
+    <script>
+        // --- 全域變數 ---
+        let waferMap = null; 
+        let dieList = []; // 已經計算好物理座標(中心點)的晶片列表
+        let view = { x: 0, y: 0, s: 1.0, panX: 0, panY: 0 };
+        let isPan = false, startX = 0, startY = 0;
+        let canvas, ctx;
         
-        // Read Settings
-        const size = parseFloat(document.getElementById('sim_size').value);
-        const alpha = parseFloat(document.getElementById('sim_alpha').value);
+        let geometryResult = {
+            centerX: 0, centerY: 0, radius: 0,
+            valid: false, counts: {}, edgeDies: []
+        };
 
-        if(p2.f === 1) {
-            marker.setAttribute('fill', '#0f0'); 
-            marker.setAttribute('fill-opacity', alpha);
-            marker.setAttribute('stroke-opacity', alpha);
-        } else {
-            marker.setAttribute('fill', 'none'); 
-            marker.setAttribute('fill-opacity', '0');
-            marker.setAttribute('stroke', 'red');
-            marker.setAttribute('stroke-opacity', alpha);
+        window.onload = () => {
+            initCanvas();
+            setTimeout(() => { autoFit(); render(); }, 200);
+        };
+
+        function getVal(id) { 
+            const el = document.getElementById(id);
+            if(!el) return 0;
+            const val = parseFloat(el.value);
+            if(id.startsWith('w_') && id!=='w_sc') return Math.max(0.001, val || 0); 
+            return val || 0; 
         }
-        marker.setAttribute('r', size / view.s); 
-        marker.setAttribute('stroke-width', 2 / view.s);
-        marker.style.display = 'block';
-    }
 
-    // ===== Render (Mode 1) =====
-    function render() {
-      if (mode === 2) { renderManual(); return; }
-      applyViewBoxForMode();
-      const svg = document.getElementById('layer-draw'); svg.innerHTML = '';
-      const stk = getVal('v_stroke') || 1;
-      const showGrid = document.getElementById('v_grid').checked;
-      const ox = getVal('off_x') / 1000, oy = getVal('off_y') / 1000;
-      document.getElementById('layer-grid').style.display = 'none';
+        // --- Canvas ---
+        function initCanvas() {
+            canvas = document.getElementById('mainCanvas');
+            ctx = canvas.getContext('2d');
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
 
-      addLn(svg, -1000, 0, 1000, 0, "#999", stk);
-      addLn(svg, 0, -1000, 0, 1000, "#999", stk);
+            canvas.addEventListener('wheel', e => {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+                const zoom = e.deltaY > 0 ? 0.9 : 1.1;
+                const worldX = (mx - view.panX) / view.s;
+                const worldY = (my - view.panY) / view.s;
+                view.s *= zoom;
+                view.panX = mx - worldX * view.s;
+                view.panY = my - worldY * view.s;
+                render(); 
+            });
 
-      pathData = [];
-      drawWaferLogic(svg, ox, oy, showGrid, stk);
-      
-      const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      marker.id = "sim-head"; marker.style.display="none"; marker.setAttribute("stroke","black");
-      svg.appendChild(marker);
+            canvas.addEventListener('mousedown', e => {
+                if(e.button===0 || e.button===1) { isPan = true; startX = e.clientX; startY = e.clientY; canvas.style.cursor = 'grabbing'; }
+            });
+            window.addEventListener('mousemove', e => {
+                if(isPan) { view.panX += e.clientX - startX; view.panY += e.clientY - startY; startX = e.clientX; startY = e.clientY; render(); }
+            });
+            window.addEventListener('mouseup', () => { isPan = false; canvas.style.cursor = 'default'; });
+        }
 
-      calcStats();
-    }
+        function resizeCanvas() {
+            const wrapper = document.getElementById('canvas-wrapper');
+            canvas.width = wrapper.clientWidth;
+            canvas.height = wrapper.clientHeight;
+            render();
+        }
 
-    function drawWaferLogic(svg, ox, oy, grid, stk) {
-      const dia = getVal('w_dia') * 25.4;
-      const r = (dia - getVal('w_margin')) / 2;
-      const dx = getVal('w_dx'), dy = getVal('w_dy'), sc = getVal('w_sc');
-      const px = dx + sc, py = dy + sc;
+        function autoFit() {
+            const dia = getVal('w_dia') * 25.4 || 200;
+            const margin = 1.1; 
+            const minDim = Math.min(canvas.width, canvas.height);
+            view.s = minDim / (dia * margin);
+            view.panX = canvas.width / 2;
+            view.panY = canvas.height / 2;
+            render();
+        }
 
-      addCir(svg, 0, 0, dia / 2, "none", "#ccc", stk);
-      addCir(svg, 0, 0, r, "none", "red", stk, "5,5");
+        // --- 檔案處理 ---
+        function handleMapUpload(input) {
+            const file = input.files[0];
+            if(!file) return;
+            const r = new FileReader();
+            r.onload = e => { 
+                const result = parseMap(e.target.result); 
+                if(result.rows > 0) {
+                    document.getElementById('map-status').innerText = `Loaded: ${file.name}`;
+                    document.getElementById('map-status').style.color = "green";
+                    document.getElementById('map_off_x').value = 0;
+                    document.getElementById('map_off_y').value = 0;
+                    if(document.getElementById('auto_est').checked) estimateWaferParams(result.rows, result.cols);
+                    
+                    updateGeometry(); 
+                    setTimeout(autoFit, 50); 
+                } else { alert("解析失敗"); }
+            };
+            r.readAsText(file);
+        }
 
-      let dies = [];
-      const nx = Math.ceil(r / px), ny = Math.ceil(r / py);
-      for (let j = -ny; j <= ny; j++) for (let i = -nx; i <= nx; i++) {
-        let cx = i * px, cy = j * py;
-        if (dist(cx-dx/2, cy-dy/2)>r || dist(cx+dx/2, cy-dy/2)>r || dist(cx-dx/2, cy+dy/2)>r || dist(cx+dx/2, cy+dy/2)>r) continue;
-        if (grid) addRect(svg, cx - dx / 2, cy - dy / 2, dx, dy, "none", "rgba(0,120,215,0.2)", stk / 2);
-        dies.push({ i, j, cx, cy });
-      }
-      document.getElementById('m1_cnt').innerText = dies.length;
-
-      const corn = getStr('m1_corn');
-      dies.sort((a, b) => {
-        let dY = (corn[0] === 't') ? a.j - b.j : b.j - a.j;
-        if (dY !== 0) return dY;
-        return (corn[1] === 'l') ? a.i - b.i : b.i - a.i;
-      });
-
-      let rows = [], cr = [], cj = dies[0]?.j;
-      dies.forEach(d => { if (d.j !== cj) { rows.push(cr); cr = []; cj = d.j; } cr.push(d); });
-      if (cr.length) rows.push(cr);
-
-      const trav = getStr('m1_trav'), seg = getVal('w_seg'), grp = mkGrp(svg);
-
-      rows.forEach((row, i) => {
-        let isRev = (trav === 'snake' && i % 2 !== 0);
-        let pRow = [...row]; if (isRev) pRow.reverse();
-        pRow.forEach(d => {
-          let sx = d.cx - seg / 2, ex = d.cx + seg / 2;
-          if (isRev) { let t = sx; sx = ex; ex = t; }
-          let p1 = { x: sx + ox, y: d.cy + oy }, p2 = { x: ex + ox, y: d.cy + oy };
-          if (pathData.length > 0) {
-            let last = pathData[pathData.length - 1];
-            if (dist(last.x - p1.x, last.y - p1.y) > 0.001) {
-              addLn(grp, last.x, last.y, p1.x, p1.y, (trav==='jump'||pathData[pathData.length-1].f===2)?"red":"#999", stk, "2,1");
-              pathData.push({ ...p1, f: 2 });
+        function parseMap(text) {
+            const lines = text.split(/\r?\n/);
+            let data = {};
+            let minR=Infinity, maxR=-Infinity, minC=Infinity, maxC=-Infinity, count=0;
+            lines.forEach((line, r) => {
+                if(!line) return;
+                for(let c=0; c<line.length; c++) {
+                    const char = line[c];
+                    if(char !== '\r' && char !== '\n') {
+                        data[`${r},${c}`] = char;
+                        if (char !== ' ') { 
+                            if(r<minR) minR=r; if(r>maxR) maxR=r;
+                            if(c<minC) minC=c; if(c>maxC) maxC=c;
+                            count++;
+                        }
+                    }
+                }
+            });
+            if(count>0) {
+                waferMap = { data, centerR: (minR+maxR)/2, centerC: (minC+maxC)/2, minR, maxR, minC, maxC };
+                return { rows: maxR - minR + 1, cols: maxC - minC + 1 };
             }
-          } else pathData.push({ ...p1, f: 2 });
-          addLn(grp, p1.x, p1.y, p2.x, p2.y, "#28a745", stk);
-          pathData.push({ ...p2, f: 1 });
-        });
-      });
-    }
-
-    // ===== Mode2 (AR) =====
-    async function startCam() {
-      const v = document.getElementById('layer-video'); v.muted = true;
-      if (stream && v.srcObject) { v.style.display = 'block'; updCam(); return; }
-      try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); } 
-      catch (e1) { try { stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); } catch (e2) {} }
-      v.srcObject = stream; v.style.display = 'block'; updCam();
-      try { await v.play(); } catch (e) { }
-    }
-    function stopCam() { const v = document.getElementById('layer-video'); if (v.srcObject) { v.srcObject.getTracks().forEach(t => t.stop()); v.srcObject = null; } v.style.display = 'none'; stream = null; }
-    function updCam() { document.getElementById('layer-video').style.opacity = document.getElementById('m2_op').value; }
-    function getManPos(e) { const r = document.getElementById('canvas-window').getBoundingClientRect(); const sc = getVal('m2_sc'); const mx = e.clientX - r.left, my = e.clientY - r.top; return { x: (mx - view.x) / view.s / sc, y: (my - view.y) / view.s / sc }; }
-    function onManDown(e) {
-      const m = getManPos(e); const hit = manPts.findIndex(p => dist(p.x - m.x, p.y - m.y) < 5 / view.s);
-      if (hit >= 0) { drag.active = true; drag.idx = hit; } else {
-        let pt = { ...m };
-        if (manPts.length && (e.shiftKey || document.getElementById('m2_ortho').checked)) {
-          const last = manPts[manPts.length - 1];
-          if (Math.abs(m.x - last.x) > Math.abs(m.y - last.y)) pt.y = last.y; else pt.x = last.x;
+            return { rows: 0, cols: 0 };
         }
-        manPts.push({ x: pt.x, y: pt.y, f: parseInt(getStr('m2_type')) });
-        renderManual();
-      }
-    }
-    function onManMove(e) { const m = getManPos(e); manPts[drag.idx].x = m.x; manPts[drag.idx].y = m.y; renderManual(); }
-    function onManRight(e) { const m = getManPos(e); const hit = manPts.findIndex(p => dist(p.x - m.x, p.y - m.y) < 5 / view.s); if (hit >= 0) { manPts.splice(hit, 1); renderManual(); } }
 
-    function renderManual() {
-      if (mode !== 2) return;
-      applyViewBoxForMode();
-      const svg = document.getElementById('layer-draw'); svg.innerHTML = '';
-      const grid = document.getElementById('layer-grid');
-      grid.style.display = document.getElementById('m2_gen').checked ? 'block' : 'none';
-      const sc = getVal('m2_sc'), gp = getVal('m2_gp') * sc, pat = document.getElementById('gridPat');
-      if (pat) { pat.setAttribute('width', gp); pat.setAttribute('height', gp); const gpth = pat.querySelector('path'); if(gpth){ gpth.setAttribute('d', `M ${gp} 0 L 0 0 0 ${gp}`); gpth.setAttribute('stroke-width', 1 / view.s); } }
-      const stk = 2 / view.s, grp = mkGrp(svg); grp.setAttribute('transform', `scale(${sc})`);
-
-      pathData = [];
-      if (manPts.length) {
-        let lp = manPts[0];
-        pathData.push({ x: lp.x, y: lp.y, f: lp.f ?? 0 });
-        addCir(grp, lp.x, lp.y, 3 / sc / view.s, "blue", "none", 0);
-        for (let i = 1; i < manPts.length; i++) {
-          let p = manPts[i];
-          let col = p.f === 1 ? "#28a745" : (p.f === 2 ? "#dc3545" : "#999");
-          let dash = p.f !== 1 ? `${5 / sc / view.s},${5 / sc / view.s}` : null;
-          addLn(grp, lp.x, lp.y, p.x, p.y, col, stk / sc, dash);
-          addCir(grp, p.x, p.y, 3 / sc / view.s, col, "none", 0);
-          pathData.push({ x: p.x, y: p.y, f: p.f });
-          lp = p;
+        function estimateWaferParams(rows, cols) {
+            const dia = getVal('w_dia') * 25.4; 
+            const scribe = 0.08; 
+            const pitchX = dia / cols, pitchY = dia / rows;
+            document.getElementById('w_dx').value = Math.max(0.1, pitchX - scribe).toFixed(3);
+            document.getElementById('w_dy').value = Math.max(0.1, pitchY - scribe).toFixed(3);
+            document.getElementById('w_sc').value = scribe;
         }
-      }
-      
-      const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      marker.id = "sim-head"; marker.style.display="none"; 
-      grp.appendChild(marker); 
 
-      calcStats();
-    }
+        // === 幾何計算核心 ===
+        function updateGeometry() {
+            if (!waferMap) return;
 
-    function clearManual() { manPts = []; renderManual(); stopSim(); }
+            const dx = getVal('w_dx'), dy = getVal('w_dy'), sc = getVal('w_sc');
+            const px = dx+sc, py = dy+sc;
+            const mapOffX = getVal('map_off_x'), mapOffY = getVal('map_off_y');
+            const alignMode = document.querySelector('input[name="align_visual"]:checked').value;
+            const shiftX = (alignMode === 'scribe') ? px/2 : 0;
+            const shiftY = (alignMode === 'scribe') ? py/2 : 0;
 
-    function calcStats() {
-      let d1 = 0, d2 = 0, d0 = 0, cnt = 0;
-      if (pathData.length > 1) {
-        let last = pathData[0]; d0 += dist(last.x, last.y);
-        for (let i = 1; i < pathData.length; i++) {
-          let p = pathData[i];
-          let d = dist(p.x - last.x, p.y - last.y);
-          if (p.f === 1) d1 += d; else if (p.f === 2) d2 += d; else d0 += d;
-          last = p; cnt++;
+            dieList = [];
+            let counts = {};
+            let pointsForCircle = []; 
+
+            const rStart = waferMap.minR, rEnd = waferMap.maxR;
+            const cStart = waferMap.minC, cEnd = waferMap.maxC;
+            const hx = dx/2, hy = dy/2;
+
+            for(let r = rStart; r <= rEnd; r++) {
+                for(let c = cStart; c <= cEnd; c++) {
+                    const char = waferMap.data[`${r},${c}`];
+                    if (!char || char === ' ' || char === '\r') continue;
+
+                    const i = c - waferMap.centerC + mapOffX;
+                    const j = r - waferMap.centerR + mapOffY;
+                    const cx = (i * px) + shiftX;
+                    const cy = (j * py) + shiftY;
+
+                    if (!counts[char]) counts[char] = 0; counts[char]++;
+
+                    let fill = null, strokeColor = "rgba(0,120,215,0.3)";
+                    if (char === 'X') { fill="#4caf50"; strokeColor="#4caf50"; }
+                    else if (char === '1') { fill="#f44336"; strokeColor="#f44336"; }
+                    else if (char === 'R') { fill="#2196f3"; strokeColor="#2196f3"; }
+                    else { fill="#9e9e9e"; strokeColor="#999"; }
+                    
+                    if(fill.startsWith('#')) {
+                        let r = parseInt(fill.slice(1,3), 16), g = parseInt(fill.slice(3,5), 16), b = parseInt(fill.slice(5,7), 16);
+                        fill = `rgba(${r},${g},${b},0.4)`;
+                    }
+
+                    dieList.push({ r, c, cx, cy, code: char, fill, strokeColor });
+
+                    if (char !== '1') {
+                        pointsForCircle.push({x: cx - hx, y: cy - hy});
+                        pointsForCircle.push({x: cx + hx, y: cy - hy});
+                        pointsForCircle.push({x: cx + hx, y: cy + hy});
+                        pointsForCircle.push({x: cx - hx, y: cy + hy});
+                    }
+                }
+            }
+
+            // 識別外圈
+            const dieSet = new Set(dieList.map(d => `${d.r},${d.c}`));
+            let edgeDies = [];
+            dieList.forEach(d => {
+                const neighbors = [`${d.r-1},${d.c}`, `${d.r+1},${d.c}`, `${d.r},${d.c-1}`, `${d.r},${d.c+1}`];
+                if(neighbors.some(n => !dieSet.has(n)) && d.code !== '1') { 
+                    d.isEdge = true; edgeDies.push(d);
+                }
+            });
+
+            // 計算最小外接圓
+            let circle = makeMinCircle(pointsForCircle);
+            
+            // 順時針排序外圈
+            if (circle) {
+                edgeDies.sort((a, b) => {
+                    let angA = Math.atan2(a.cx - circle.x, -(a.cy - circle.y)); if (angA < 0) angA += 2 * Math.PI;
+                    let angB = Math.atan2(b.cx - circle.x, -(b.cy - circle.y)); if (angB < 0) angB += 2 * Math.PI;
+                    return angA - angB;
+                });
+            }
+            edgeDies.forEach((d, idx) => {
+                d.edgeID = (idx + 1).toString().padStart(4, '0');
+            });
+
+            geometryResult = {
+                centerX: circle ? circle.x : 0,
+                centerY: circle ? circle.y : 0,
+                radius: circle ? circle.r : 0,
+                valid: !!circle,
+                counts: counts,
+                edgeDies: edgeDies
+            };
+
+            document.getElementById('calc_cx').innerText = geometryResult.centerX.toFixed(2);
+            document.getElementById('calc_cy').innerText = geometryResult.centerY.toFixed(2);
+            document.getElementById('calc_r').innerText = geometryResult.radius.toFixed(2);
+            
+            const dia = getVal('w_dia') * 25.4;
+            const margin = (dia/2) - geometryResult.radius;
+            document.getElementById('res_dia').innerText = dia.toFixed(2);
+            document.getElementById('res_outer').innerText = (geometryResult.radius*2).toFixed(2);
+            document.getElementById('res_margin').innerText = margin.toFixed(2);
+            
+            updateDynamicStats(counts);
+            render(); 
         }
-      }
-      document.getElementById('res_dist').innerText = ((d1 + d2 + d0) / 1000).toFixed(2) + " m";
-      const vW = getVal('spd_w'), vJ = getVal('spd_j');
-      const totalT = (vW>0?d1/vW:0) + (vJ>0?(d2+d0)/vJ:0) + (cnt * getVal('t_acc'));
-      const m = Math.floor(totalT / 60), s = Math.floor(totalT % 60);
-      document.getElementById('res_time').innerText = `${m}:${s.toString().padStart(2, '0')}`;
-      document.getElementById('res_time_s').innerText = totalT.toFixed(2) + " s";
-      document.getElementById('res_segs').innerText = cnt;
-      document.getElementById('det_f1').innerText = `${(d1 / 1000).toFixed(2)}m`;
-      document.getElementById('det_f2').innerText = `${(d2 / 1000).toFixed(2)}m`;
-      document.getElementById('det_f0').innerText = `${(d0 / 1000).toFixed(2)}m`;
-    }
 
-    function dlCSV() {
-      let txt = "X,Y,Flag\n";
-      pathData.forEach(p => txt += `${(p.x ?? 0).toFixed(3)},${(p.y ?? 0).toFixed(3)},${(p.f ?? 0)}\n`);
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv' })); a.download = 'path_data.csv'; a.click();
-    }
-    function dlSVG() {
-      let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
-      if(pathData.length===0){ minX=-100; maxX=100; minY=-100; maxY=100; }
-      else{ pathData.forEach(p=>{ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y; }); }
-      const pad=10, vb=`${minX-pad} ${minY-pad} ${(maxX-minX)+pad*2} ${(maxY-minY)+pad*2}`;
-      const content = document.getElementById('layer-draw').innerHTML;
-      const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}">${content}</svg>`;
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([svgStr], { type: 'image/svg+xml' })); a.download = 'preview.svg'; a.click();
-    }
+        // --- Welzl's Algorithm ---
+        function makeMinCircle(points) {
+            if (points.length === 0) return null;
+            for (let i = points.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [points[i], points[j]] = [points[j], points[i]];
+            }
+            let circle = null;
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                if (!circle || !isInside(circle, p)) {
+                    circle = makeCircleOnePoint(points.slice(0, i + 1), p);
+                }
+            }
+            return circle;
+        }
+        function makeCircleOnePoint(points, p) {
+            let c = {x: p.x, y: p.y, r: 0};
+            for(let i=0; i<points.length; i++) {
+                let q = points[i];
+                if(!isInside(c, q)) {
+                    c = makeCircleTwoPoints(p, q);
+                    c = makeCircleTwoPointsBoundary(points.slice(0, i), p, q);
+                }
+            }
+            return c;
+        }
+        function makeCircleTwoPointsBoundary(points, p, q) {
+            let c = makeCircleTwoPoints(p, q);
+            for(let i=0; i<points.length; i++) {
+                let r = points[i];
+                if(!isInside(c, r)) {
+                    c = makeCircleThreePoints(p, q, r);
+                }
+            }
+            return c;
+        }
+        function makeCircleTwoPoints(p1, p2) {
+            const x = (p1.x + p2.x) / 2;
+            const y = (p1.y + p2.y) / 2;
+            const r = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2)) / 2;
+            return { x, y, r };
+        }
+        function makeCircleThreePoints(p1, p2, p3) {
+            const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y, x3 = p3.x, y3 = p3.y;
+            const D = 2 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
+            if (Math.abs(D) < 1e-6) return makeCircleTwoPoints(p1, p2);
+            const centerX = ((x1*x1 + y1*y1) * (y2 - y3) + (x2*x2 + y2*y2) * (y3 - y1) + (x3*x3 + y3*y3) * (y1 - y2)) / D;
+            const centerY = ((x1*x1 + y1*y1) * (x3 - x2) + (x2*x2 + y2*y2) * (x1 - x3) + (x3*x3 + y3*y3) * (x2 - x1)) / D;
+            const r = Math.sqrt(Math.pow(centerX - x1, 2) + Math.pow(centerY - y1, 2));
+            return { x: centerX, y: centerY, r: r };
+        }
+        function isInside(c, p) {
+            return Math.sqrt(Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2)) <= c.r + 1e-4;
+        }
 
-    function mkGrp(p) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); p.appendChild(g); return g; }
-    function addLn(p, x1, y1, x2, y2, c, w, d) { const l = document.createElementNS("http://www.w3.org/2000/svg", "line"); l.setAttribute("x1", x1); l.setAttribute("y1", y1); l.setAttribute("x2", x2); l.setAttribute("y2", y2); l.setAttribute("stroke", c); l.setAttribute("stroke-width", w); if (d) l.setAttribute("stroke-dasharray", d); p.appendChild(l); }
-    function addCir(p, x, y, r, f, s, w, d) { const c = document.createElementNS("http://www.w3.org/2000/svg", "circle"); c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", r); c.setAttribute("fill", f); if (s) c.setAttribute("stroke", s); if (w) c.setAttribute("stroke-width", w); if (d) c.setAttribute("stroke-dasharray", d); p.appendChild(c); }
-    function addRect(p, x, y, w, h, f, s, sw, d) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("x", x); r.setAttribute("y", y); r.setAttribute("width", w); r.setAttribute("height", h); r.setAttribute("fill", f); r.setAttribute("stroke", s); r.setAttribute("stroke-width", sw); if (d) r.setAttribute("stroke-dasharray", d); p.appendChild(r); }
-    function dist(dx, dy) { return Math.sqrt(dx * dx + dy * dy); }
-  </script>
+        // === 繪圖 ===
+        function render() {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#fafafa"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.translate(view.panX, view.panY);
+            ctx.scale(view.s, view.s);
+
+            const stk = getVal('v_stroke');
+            const dx = getVal('w_dx'), dy = getVal('w_dy');
+            const lineWidth = Math.max(stk / view.s, 0.5 / view.s);
+            const showText = document.getElementById('map_show_text').checked;
+            ctx.lineWidth = lineWidth;
+
+            // 1. 座標軸 & 標準圓 (使用計算出的圓心)
+            ctx.strokeStyle = "#ccc";
+            ctx.beginPath(); ctx.moveTo(-1000, 0); ctx.lineTo(1000, 0); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, -1000); ctx.lineTo(0, 1000); ctx.stroke();
+
+            const dia = getVal('w_dia')*25.4;
+            
+            // 藍色實線圓：以計算出的 MEC 圓心為準 (因為要看 Margin，必須同心比較)
+            // 或者是晶圓幾何中心？
+            // 根據需求：Margin = 標準圓 - 包絡圓。為了視覺比較，通常將兩圓同心繪製。
+            const drawCx = geometryResult.valid ? geometryResult.centerX : 0;
+            const drawCy = geometryResult.valid ? geometryResult.centerY : 0;
+
+            ctx.strokeStyle = "#2196f3"; ctx.lineWidth = lineWidth * 1.5;
+            ctx.beginPath(); 
+            ctx.arc(drawCx, drawCy, dia/2, 0, Math.PI*2); 
+            ctx.stroke();
+
+            // 2. 晶片
+            dieList.forEach(d => {
+                if (d.fill) { ctx.fillStyle = d.fill; ctx.fillRect(d.cx - dx/2, d.cy - dy/2, dx, dy); }
+                ctx.strokeStyle = d.strokeColor;
+                
+                if (d.isEdge) ctx.lineWidth = lineWidth * 2;
+                else ctx.lineWidth = lineWidth;
+                
+                if (d.isEdge) ctx.strokeStyle = "#ff9800"; 
+
+                ctx.strokeRect(d.cx - dx/2, d.cy - dy/2, dx, dy);
+
+                if (showText && dx * view.s > 8) {
+                    ctx.save(); ctx.translate(d.cx, d.cy);
+                    let scaleF = (Math.min(dx, dy) * 0.6) / 10; ctx.scale(scaleF, scaleF);
+                    ctx.font = "bold 10px sans-serif";
+                    let txt = d.code; ctx.fillStyle = "#000";
+                    if (d.isEdge) { txt = d.edgeID; ctx.fillStyle = "#d84315"; }
+                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.fillText(txt, 0, 0);
+                    ctx.restore();
+                }
+            });
+
+            // 3. 最小外接圓 (紅色虛線)
+            if (geometryResult.valid) {
+                ctx.strokeStyle = "#009688"; ctx.lineWidth = lineWidth * 1.5;
+                ctx.setLineDash([5/view.s, 5/view.s]);
+                ctx.beginPath(); 
+                ctx.arc(geometryResult.centerX, geometryResult.centerY, geometryResult.radius, 0, Math.PI*2); 
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const cs = 10 / view.s;
+                ctx.beginPath();
+                ctx.moveTo(geometryResult.centerX - cs, geometryResult.centerY); ctx.lineTo(geometryResult.centerX + cs, geometryResult.centerY);
+                ctx.moveTo(geometryResult.centerX, geometryResult.centerY - cs); ctx.lineTo(geometryResult.centerX, geometryResult.centerY + cs);
+                ctx.stroke();
+            }
+        }
+
+        function updateDynamicStats(counts) {
+            const container = document.getElementById('stats_container');
+            if (Object.keys(counts).length === 0) { container.innerHTML = '<div style="font-size:11px; color:#888;">無資料</div>'; return; }
+            let html = '';
+            Object.keys(counts).sort().forEach(k => {
+                let c = '#333'; if(k==='X') c='#4caf50'; else if(k==='1') c='#f44336';
+                html += `<div class="row" style="color:${c}"><span>■ ${k}:</span><span class="val">${counts[k]}</span></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function dlCSV() {
+            const anchorMode = document.getElementById('csv_die_anchor').value;
+            const globalOrigin = document.getElementById('csv_global_origin').value;
+            const dx = getVal('w_dx'), dy = getVal('w_dy');
+            
+            let globalOffX = 0, globalOffY = 0;
+            
+            // 尋找 Global Origin 偏移量
+            if (globalOrigin === 'ref_r') {
+                // 尋找最左邊 'R' (這裡暫時寫死代碼R，若需動態可加Input)
+                let targetR = null;
+                dieList.forEach(d => {
+                    if (d.code === 'R') {
+                        if (!targetR) targetR = d;
+                        else if (d.c < targetR.c || (d.c === targetR.c && d.r < targetR.r)) targetR = d;
+                    }
+                });
+                if (targetR) { globalOffX = targetR.cx; globalOffY = targetR.cy; }
+                else { alert("找不到 'R'，使用圓心 (0,0)"); }
+            }
+
+            let txt = "Edge_ID,Row,Col,X,Y,Code\n";
+            const hw = dx/2, hh = dy/2;
+
+            dieList.forEach(d => {
+                let outX = d.cx - globalOffX;
+                let outY = d.cy - globalOffY;
+
+                // 根據錨點調整
+                switch(anchorMode) {
+                    case 'TL': outX -= hw; outY -= hh; break;
+                    case 'TR': outX += hw; outY -= hh; break;
+                    case 'BL': outX -= hw; outY += hh; break;
+                    case 'BR': outX += hw; outY += hh; break;
+                }
+
+                let idStr = d.isEdge ? d.edgeID : "";
+                txt += `${idStr},${d.r},${d.c},${outX.toFixed(3)},${outY.toFixed(3)},${d.code}\n`;
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([txt],{type:'text/csv'}));
+            a.download = `wafer_data.csv`; a.click();
+        }
+        function dlSVG() { alert("SVG 下載僅包含基礎圖形"); }
+    </script>
 </body>
 </html>
