@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wafer Tool v37 (Mode1+AR Fix)</title>
+  <title>Wafer Tool v37 (AR Player)</title>
   <style>
     :root{
       --bg:#f4f4f9; --panel:#fff; --text:#333; --border:#ddd;
@@ -30,10 +30,8 @@
 
     /* 世界容器 */
     #world{
-      position:absolute; top:0; left:0;
-      width:0; height:0;
-      transform-origin:0 0;
-      will-change:transform;
+      position:absolute; top:0; left:0; width:0; height:0;
+      transform-origin:0 0; will-change:transform;
     }
 
     /* 圖層堆疊 */
@@ -41,27 +39,13 @@
 
     /* 影像層（AR） */
     #layer-video{
-      width:640px; height:480px;
-      top:0; left:0; opacity:0.5;
-      pointer-events:none; display:none;
-      transform-origin:0 0;
-      z-index:0;
-      background:transparent;
+      width:640px; height:480px; top:0; left:0; opacity:0.5;
+      pointer-events:none; display:none; transform-origin:0 0; z-index:0;
     }
 
     /* 網格層 / 繪圖層 */
-    #layer-grid{
-      width:100000px; height:100000px;
-      pointer-events:none;
-      z-index:1;
-      background:transparent;
-    }
-    #layer-draw{
-      width:100000px; height:100000px;
-      pointer-events:none; /* 讓事件更穩定地落到 canvas-window（你是掛在那裡） */
-      z-index:2;
-      background:transparent;
-    }
+    #layer-grid{ width:100000px; height:100000px; pointer-events:none; z-index:1; }
+    #layer-draw{ width:100000px; height:100000px; pointer-events:none; z-index:2; }
 
     .footer{
       height:140px; background:var(--panel); border-top:1px solid var(--border);
@@ -78,17 +62,14 @@
     .sec-title{ font-size:13px; font-weight:bold; color:#555; border-left:3px solid var(--primary); padding-left:6px; margin:15px 0 5px 0; }
     .in-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:13px; }
     input[type=number], select{ width:80px; text-align:right; padding:3px; border:1px solid #ccc; border-radius:3px; }
-    input[type=range]{ flex:1; margin-left:10px; }
+    input[type=range]{ flex:1; margin-left:10px; cursor: pointer; }
     button{
       flex:1; padding:6px; border:none; border-radius:4px; cursor:pointer; color:white;
       font-weight:bold; font-size:12px; transition:0.2s;
     }
     button:hover{ opacity:0.9; }
     .btn-grp{ display:flex; gap:5px; margin-top:10px; }
-    .bg-blue{ background:var(--primary); }
-    .bg-green{ background:#28a745; }
-    .bg-red{ background:#dc3545; }
-    .bg-gray{ background:#666; color:white; }
+    .bg-blue{ background:var(--primary); } .bg-green{ background:#28a745; } .bg-red{ background:#dc3545; } .bg-gray{ background:#666; color:white; } .bg-accent{ background:var(--accent); }
 
     .mode-tabs{ display:flex; gap:5px; margin-bottom:10px; }
     .tab{
@@ -110,13 +91,16 @@
     }
 
     .g-param{ display:none; }
+    /* 播放器專用樣式 */
+    .player-ctrl { background: #fff3e0; padding: 8px; border-radius: 6px; border: 1px solid #ffcc80; margin-top: 10px; }
+    
     path, line, circle, rect { vector-effect: non-scaling-stroke; }
   </style>
 </head>
 
 <body>
   <div class="header">
-    <span>Wafer Tool v37 <small style="font-weight:normal;color:#666;">(Mode1+AR Fix)</small></span>
+    <span>Wafer Tool v37 <small style="font-weight:normal;color:#666;">(AR Player)</small></span>
   </div>
 
   <div class="container">
@@ -152,7 +136,6 @@
         <div class="in-row"><label>起點</label><select id="m1_corn" onchange="render()"><option value="tl">TL (左上)</option><option value="tr">TR</option><option value="bl">BL</option><option value="br">BR</option></select></div>
         <div class="in-row"><label>類型</label><select id="m1_pat" onchange="render()"><option value="line">Line (線段)</option><option value="zigzag">Zig (Z字)</option></select></div>
         <div class="in-row"><label>方式</label><select id="m1_trav" onchange="render()"><option value="snake">Snake (蛇行)</option><option value="jump">Jump (跳躍)</option></select></div>
-
         <div class="in-row" style="margin-top:10px;background:#e3f2fd;padding:5px;"><label>晶片數:</label><span id="m1_cnt" style="font-weight:bold;">0</span></div>
       </div>
 
@@ -166,7 +149,25 @@
         <div class="in-row"><label><input type="checkbox" id="m2_gen" checked onchange="renderManual()"> 顯示網格</label><input type="number" id="m2_gp" value="10" style="width:50px;" onchange="renderManual()"></div>
         <div class="in-row"><label><input type="checkbox" id="m2_ortho"> 正交 (Shift)</label></div>
         <div class="in-row"><label>類型</label><select id="m2_type"><option value="1">Disp (噴塗)</option><option value="0">Move (移動)</option><option value="2">Jump (快移)</option></select></div>
-        <button class="bg-red" style="width:100%;margin-top:10px;" onclick="clearManual()">清除畫布 (Clear)</button>
+        
+        <button class="bg-red" style="width:100%;margin-top:5px;" onclick="clearManual()">清除畫布</button>
+
+        <div class="player-ctrl">
+            <div style="font-size:12px; font-weight:bold; color:var(--accent); margin-bottom:5px;">路徑預覽 (Preview)</div>
+            <div class="in-row">
+                <button class="bg-green" onclick="playSim()" id="btn_play">▶ 播放</button>
+                <button class="bg-red" onclick="stopSim()">■ 停止</button>
+            </div>
+            <div class="in-row">
+                <label>進度</label>
+                <input type="range" id="sim_progress" min="0" max="100" value="0" step="0.1" oninput="seekSim(this.value)">
+            </div>
+            <div class="in-row">
+                <label>速度</label>
+                <input type="range" id="sim_speed" min="1" max="50" value="5">
+                <span id="sim_spd_val" style="font-size:11px; width:30px; text-align:right;">5x</span>
+            </div>
+        </div>
       </div>
 
       <div class="btn-grp">
@@ -183,7 +184,6 @@
         </div>
 
         <div id="world">
-          <!-- 修復：加 muted + playsinline，並由 JS 強制 play() -->
           <video id="layer-video" autoplay playsinline muted class="layer"></video>
 
           <svg id="layer-grid" class="layer" xmlns="http://www.w3.org/2000/svg" viewBox="-50000 -50000 100000 100000">
@@ -200,13 +200,7 @@
 
         <div class="help-box" id="manual-help">
           <b>操作指南:</b>
-          <ul>
-            <li>左鍵: 新增點</li>
-            <li>拖曳: 移動點</li>
-            <li>右鍵: 刪除點</li>
-            <li>滾輪: 縮放</li>
-            <li>中鍵/Ctrl: 平移</li>
-          </ul>
+          <ul><li>左鍵: 新增</li><li>拖曳: 移動</li><li>右鍵: 刪除</li><li>滾輪: 縮放</li><li>中鍵: 平移</li></ul>
         </div>
       </div>
 
@@ -229,81 +223,60 @@
   </div>
 
   <script>
-    // ===== Mode1 顯示修復依賴 =====
     const ORG = 50000;
-
     let mode = 1;
-    let pathData = [];
-    let manPts = [];
+    let pathData = []; // {x, y, f}
+    let manPts = []; // raw input points
 
     let view = { x: 0, y: 0, s: 1.0 };
     let isPan = false, startX = 0, startY = 0;
     let drag = { active: false, idx: -1 };
     let stream = null;
 
+    // Simulation State
+    let simState = {
+        playing: false,
+        idx: 0, // Current float index (allows interpolation)
+        totalLen: 0,
+        reqId: null
+    };
+
     window.onload = () => {
       initEvents();
       setMode(1);
       setTimeout(autoFit, 100);
       window.addEventListener('resize', () => autoFit());
+      
+      // Update Speed Label
+      document.getElementById('sim_speed').oninput = function() {
+          document.getElementById('sim_spd_val').innerText = this.value + 'x';
+      };
     };
 
     function applyViewBoxForMode() {
       const grid = document.getElementById('layer-grid');
       const draw = document.getElementById('layer-draw');
       const gridRect = document.getElementById('gridRect');
-
-      if (mode === 1) {
-        const vb = `-${ORG} -${ORG} ${ORG*2} ${ORG*2}`;
-        grid.setAttribute('viewBox', vb);
-        draw.setAttribute('viewBox', vb);
-        // Mode1 gridRect 對齊負座標範圍
-        gridRect.setAttribute('x', -ORG);
-        gridRect.setAttribute('y', -ORG);
-        gridRect.setAttribute('width', ORG*2);
-        gridRect.setAttribute('height', ORG*2);
-      } else {
-        // Mode2 用正座標，避免 video / 手繪座標被「(0,0)落在(50000,50000)」這種怪偏移
-        const vb = `0 0 ${ORG*2} ${ORG*2}`;
-        grid.setAttribute('viewBox', vb);
-        draw.setAttribute('viewBox', vb);
-        // Mode2 gridRect 對齊正座標範圍
-        gridRect.setAttribute('x', 0);
-        gridRect.setAttribute('y', 0);
-        gridRect.setAttribute('width', ORG*2);
-        gridRect.setAttribute('height', ORG*2);
-      }
+      const vb = (mode===1) ? `-${ORG} -${ORG} ${ORG*2} ${ORG*2}` : `0 0 ${ORG*2} ${ORG*2}`;
+      const xy = (mode===1) ? -ORG : 0;
+      
+      grid.setAttribute('viewBox', vb);
+      draw.setAttribute('viewBox', vb);
+      gridRect.setAttribute('x', xy); gridRect.setAttribute('y', xy);
     }
 
     function setMode(id) {
+      stopSim(); // 切換模式時停止播放
       mode = id;
-
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.getElementById(`tab-${id}`).classList.add('active');
-
       document.getElementById('p-m1').style.display = (id === 1) ? 'block' : 'none';
       document.getElementById('p-m2').style.display = (id === 2) ? 'block' : 'none';
-
       const isMan = (id === 2);
-
       document.getElementById('manual-help').style.display = isMan ? 'block' : 'none';
       document.getElementById('layer-video').style.display = isMan ? 'block' : 'none';
-
-      // 防呆：這份 HTML 沒有 wafer-dims-group
-      const waferDimsGroup = document.getElementById('wafer-dims-group');
-      if (waferDimsGroup) waferDimsGroup.style.display = isMan ? 'none' : 'block';
-
       applyViewBoxForMode();
-
-      if (isMan) {
-        startCam();
-        updCam();
-        renderManual();
-      } else {
-        stopCam();
-        render();
-      }
-
+      if (isMan) { startCam(); updCam(); renderManual(); } else { stopCam(); render(); }
       autoFit();
     }
 
@@ -312,96 +285,141 @@
 
     function initEvents() {
       const win = document.getElementById('canvas-window');
-
       win.addEventListener('wheel', e => {
         e.preventDefault();
         const d = e.deltaY > 0 ? 0.9 : 1.1;
-
         const rect = win.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
-
+        const mx = e.clientX - rect.left, my = e.clientY - rect.top;
         const ns = view.s * d;
         view.x = mx - (mx - view.x) * (ns / view.s);
         view.y = my - (my - view.y) * (ns / view.s);
         view.s = ns;
-
         updWorld();
-        if (mode === 2) renderManual();
+        if(mode===2) renderManual(); // Update stroke width
       });
-
       win.addEventListener('mousedown', e => {
         if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
           isPan = true; startX = e.clientX; startY = e.clientY;
-          win.style.cursor = 'grabbing';
-          e.preventDefault();
-        } else if (e.button === 0 && mode === 2) {
-          onManDown(e);
-        }
+          win.style.cursor = 'grabbing'; e.preventDefault();
+        } else if (e.button === 0 && mode === 2) onManDown(e);
       });
-
       window.addEventListener('mousemove', e => {
         if (isPan) {
-          view.x += (e.clientX - startX);
-          view.y += (e.clientY - startY);
-          startX = e.clientX; startY = e.clientY;
-          updWorld();
-        } else if (mode === 2 && drag.active) {
-          onManMove(e);
-        }
+          view.x += (e.clientX - startX); view.y += (e.clientY - startY);
+          startX = e.clientX; startY = e.clientY; updWorld();
+        } else if (mode === 2 && drag.active) onManMove(e);
       });
-
-      window.addEventListener('mouseup', () => {
-        isPan = false; drag.active = false;
-        win.style.cursor = (mode === 2) ? 'crosshair' : 'default';
-      });
-
-      win.addEventListener('contextmenu', e => {
-        if (mode === 2) { e.preventDefault(); onManRight(e); }
-      });
+      window.addEventListener('mouseup', () => { isPan = false; drag.active = false; win.style.cursor = (mode===2)?'crosshair':'default'; });
+      win.addEventListener('contextmenu', e => { if (mode === 2) { e.preventDefault(); onManRight(e); } });
     }
 
-    function updWorld() {
-      document.getElementById('world').style.transform =
-        `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.s})`;
-    }
+    function updWorld() { document.getElementById('world').style.transform = `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.s})`; }
 
     function autoFit() {
       const win = document.getElementById('canvas-window');
       const w = win.clientWidth, h = win.clientHeight;
-
       if (mode === 1) {
         const dia = getVal('w_dia') * 25.4 || 200;
         view.s = Math.min(w / (dia * 1.2), h / (dia * 1.2));
-
-        // Mode1：補回 viewBox 的 ORG 偏移，讓 (0,0) 出現在視窗中心
-        view.x = (w / 2) - (ORG * view.s);
-        view.y = (h / 2) - (ORG * view.s);
-
-        updWorld();
-        return;
+        view.x = (w / 2) - (ORG * view.s); view.y = (h / 2) - (ORG * view.s);
+      } else {
+        view.x = 0; view.y = 0; view.s = 1.0;
       }
-
-      // Mode2：AR 以左上為原點更直覺（video 640x480 會出現在左上）
-      view.x = 0;
-      view.y = 0;
-      view.s = 1.0;
       updWorld();
     }
 
-    // ===== Mode1 Render =====
+    // ===== Simulation Logic (New Feature) =====
+    function playSim() {
+        if(pathData.length < 2) return;
+        if(simState.playing) {
+            // Pause
+            simState.playing = false;
+            cancelAnimationFrame(simState.reqId);
+            document.getElementById('btn_play').innerText = "▶ 播放";
+        } else {
+            // Play
+            if(simState.idx >= pathData.length - 1) simState.idx = 0; // Restart if at end
+            simState.playing = true;
+            document.getElementById('btn_play').innerText = "⏸ 暫停";
+            simLoop();
+        }
+    }
+
+    function stopSim() {
+        simState.playing = false;
+        cancelAnimationFrame(simState.reqId);
+        simState.idx = 0;
+        document.getElementById('btn_play').innerText = "▶ 播放";
+        document.getElementById('sim_progress').value = 0;
+        updateSimMarker();
+    }
+
+    function seekSim(val) {
+        // Val is 0-100%
+        if(pathData.length < 2) return;
+        simState.idx = (val / 100) * (pathData.length - 1);
+        updateSimMarker();
+    }
+
+    function simLoop() {
+        if(!simState.playing) return;
+        
+        const speed = parseFloat(document.getElementById('sim_speed').value) * 0.05; // Base speed factor
+        simState.idx += speed;
+
+        if(simState.idx >= pathData.length - 1) {
+            simState.idx = pathData.length - 1;
+            stopSim(); // Auto stop at end
+            return;
+        }
+
+        // Update Slider UI
+        const pct = (simState.idx / (pathData.length - 1)) * 100;
+        document.getElementById('sim_progress').value = pct;
+
+        updateSimMarker();
+        simState.reqId = requestAnimationFrame(simLoop);
+    }
+
+    function updateSimMarker() {
+        const marker = document.getElementById('sim-head');
+        if(!marker || pathData.length < 1) return;
+
+        const i = Math.floor(simState.idx);
+        const t = simState.idx - i;
+        const p1 = pathData[i];
+        const p2 = pathData[Math.min(i+1, pathData.length-1)];
+
+        // Linear Interpolation
+        const cx = p1.x + (p2.x - p1.x) * t;
+        const cy = p1.y + (p2.y - p1.y) * t;
+
+        // Visual update
+        marker.setAttribute('cx', cx);
+        marker.setAttribute('cy', cy);
+        
+        // Change color based on type (p2.f determines the segment type)
+        if(p2.f === 1) {
+            marker.setAttribute('fill', '#0f0'); // Dispense (Solid)
+            marker.setAttribute('fill-opacity', '1');
+        } else {
+            marker.setAttribute('fill', 'none'); // Move/Jump (Hollow)
+            marker.setAttribute('fill-opacity', '0');
+            marker.setAttribute('stroke', 'red');
+        }
+        marker.setAttribute('r', 6 / view.s); // Scale safe size
+        marker.setAttribute('stroke-width', 2 / view.s);
+        marker.style.display = 'block';
+    }
+
+    // ===== Render Logic (Mode 1) =====
     function render() {
       if (mode === 2) { renderManual(); return; }
-
       applyViewBoxForMode();
-
-      const svg = document.getElementById('layer-draw');
-      svg.innerHTML = '';
-
+      const svg = document.getElementById('layer-draw'); svg.innerHTML = '';
       const stk = getVal('v_stroke') || 1;
       const showGrid = document.getElementById('v_grid').checked;
       const ox = getVal('off_x') / 1000, oy = getVal('off_y') / 1000;
-
       document.getElementById('layer-grid').style.display = 'none';
 
       addLn(svg, -1000, 0, 1000, 0, "#999", stk);
@@ -409,6 +427,12 @@
 
       pathData = [];
       drawWaferLogic(svg, ox, oy, showGrid, stk);
+      
+      // Add Sim Marker (Hidden initially)
+      const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      marker.id = "sim-head"; marker.style.display="none"; marker.setAttribute("stroke","black");
+      svg.appendChild(marker);
+
       calcStats();
     }
 
@@ -425,9 +449,7 @@
       const nx = Math.ceil(r / px), ny = Math.ceil(r / py);
       for (let j = -ny; j <= ny; j++) for (let i = -nx; i <= nx; i++) {
         let cx = i * px, cy = j * py;
-        if (dist(cx - dx / 2, cy - dy / 2) > r || dist(cx + dx / 2, cy - dy / 2) > r ||
-            dist(cx - dx / 2, cy + dy / 2) > r || dist(cx + dx / 2, cy + dy / 2) > r) continue;
-
+        if (dist(cx-dx/2, cy-dy/2)>r || dist(cx+dx/2, cy-dy/2)>r || dist(cx-dx/2, cy+dy/2)>r || dist(cx+dx/2, cy+dy/2)>r) continue;
         if (grid) addRect(svg, cx - dx / 2, cy - dy / 2, dx, dy, "none", "rgba(0,120,215,0.2)", stk / 2);
         dies.push({ i, j, cx, cy });
       }
@@ -444,27 +466,22 @@
       dies.forEach(d => { if (d.j !== cj) { rows.push(cr); cr = []; cj = d.j; } cr.push(d); });
       if (cr.length) rows.push(cr);
 
-      const trav = getStr('m1_trav');
-      const seg = getVal('w_seg');
-      const grp = mkGrp(svg);
+      const trav = getStr('m1_trav'), seg = getVal('w_seg'), grp = mkGrp(svg);
 
       rows.forEach((row, i) => {
         let isRev = (trav === 'snake' && i % 2 !== 0);
         let pRow = [...row]; if (isRev) pRow.reverse();
-
         pRow.forEach(d => {
           let sx = d.cx - seg / 2, ex = d.cx + seg / 2;
           if (isRev) { let t = sx; sx = ex; ex = t; }
           let p1 = { x: sx + ox, y: d.cy + oy }, p2 = { x: ex + ox, y: d.cy + oy };
-
           if (pathData.length > 0) {
             let last = pathData[pathData.length - 1];
             if (dist(last.x - p1.x, last.y - p1.y) > 0.001) {
-              addLn(grp, last.x, last.y, p1.x, p1.y, (trav === 'jump' || pathData[pathData.length - 1].f === 2) ? "red" : "#999", stk, "2,1");
+              addLn(grp, last.x, last.y, p1.x, p1.y, (trav==='jump'||pathData[pathData.length-1].f===2)?"red":"#999", stk, "2,1");
               pathData.push({ ...p1, f: 2 });
             }
           } else pathData.push({ ...p1, f: 2 });
-
           addLn(grp, p1.x, p1.y, p2.x, p2.y, "#28a745", stk);
           pathData.push({ ...p2, f: 1 });
         });
@@ -473,250 +490,109 @@
 
     // ===== Mode2 (AR) =====
     async function startCam() {
-      const v = document.getElementById('layer-video');
-      v.muted = true; // 修：確保 autoplay 不被擋
-
-      // 如果已經有 stream，就不要重複開
-      if (stream && v.srcObject) {
-        v.style.display = 'block';
-        updCam();
-        return;
-      }
-
-      try {
-        // 先試 environment
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-      } catch (e1) {
-        try {
-          // fallback：generic
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        } catch (e2) {
-          console.log("getUserMedia failed:", e2);
-          return;
-        }
-      }
-
-      v.srcObject = stream;
-      v.style.display = 'block';
-      updCam();
-
-      // 修：有些瀏覽器需要顯式 play()
-      try { await v.play(); } catch (e) { /* 忽略，通常 user gesture 後會開始 */ }
+      const v = document.getElementById('layer-video'); v.muted = true;
+      if (stream && v.srcObject) { v.style.display = 'block'; updCam(); return; }
+      try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); } 
+      catch (e1) { try { stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); } catch (e2) {} }
+      v.srcObject = stream; v.style.display = 'block'; updCam();
+      try { await v.play(); } catch (e) { }
     }
-
-    function stopCam() {
-      const v = document.getElementById('layer-video');
-      if (v.srcObject) {
-        v.srcObject.getTracks().forEach(t => t.stop());
-        v.srcObject = null;
-      }
-      v.style.display = 'none';
-      stream = null;
-    }
-
-    function updCam() {
-      document.getElementById('layer-video').style.opacity = document.getElementById('m2_op').value;
-    }
-
-    function getManPos(e) {
-      const r = document.getElementById('canvas-window').getBoundingClientRect();
-      const sc = getVal('m2_sc');
-      const mx = e.clientX - r.left;
-      const my = e.clientY - r.top;
-      return { x: (mx - view.x) / view.s / sc, y: (my - view.y) / view.s / sc };
-    }
-
+    function stopCam() { const v = document.getElementById('layer-video'); if (v.srcObject) { v.srcObject.getTracks().forEach(t => t.stop()); v.srcObject = null; } v.style.display = 'none'; stream = null; }
+    function updCam() { document.getElementById('layer-video').style.opacity = document.getElementById('m2_op').value; }
+    function getManPos(e) { const r = document.getElementById('canvas-window').getBoundingClientRect(); const sc = getVal('m2_sc'); const mx = e.clientX - r.left, my = e.clientY - r.top; return { x: (mx - view.x) / view.s / sc, y: (my - view.y) / view.s / sc }; }
     function onManDown(e) {
-      const m = getManPos(e);
-      const hit = manPts.findIndex(p => dist(p.x - m.x, p.y - m.y) < 5 / view.s);
-
-      if (hit >= 0) {
-        drag.active = true; drag.idx = hit;
-      } else {
+      const m = getManPos(e); const hit = manPts.findIndex(p => dist(p.x - m.x, p.y - m.y) < 5 / view.s);
+      if (hit >= 0) { drag.active = true; drag.idx = hit; } else {
         let pt = { ...m };
         if (manPts.length && (e.shiftKey || document.getElementById('m2_ortho').checked)) {
           const last = manPts[manPts.length - 1];
-          if (Math.abs(m.x - last.x) > Math.abs(m.y - last.y)) pt.y = last.y;
-          else pt.x = last.x;
+          if (Math.abs(m.x - last.x) > Math.abs(m.y - last.y)) pt.y = last.y; else pt.x = last.x;
         }
         manPts.push({ x: pt.x, y: pt.y, f: parseInt(getStr('m2_type')) });
         renderManual();
       }
     }
-
-    function onManMove(e) {
-      const m = getManPos(e);
-      manPts[drag.idx].x = m.x;
-      manPts[drag.idx].y = m.y;
-      renderManual();
-    }
-
-    function onManRight(e) {
-      const m = getManPos(e);
-      const hit = manPts.findIndex(p => dist(p.x - m.x, p.y - m.y) < 5 / view.s);
-      if (hit >= 0) { manPts.splice(hit, 1); renderManual(); }
-    }
+    function onManMove(e) { const m = getManPos(e); manPts[drag.idx].x = m.x; manPts[drag.idx].y = m.y; renderManual(); }
+    function onManRight(e) { const m = getManPos(e); const hit = manPts.findIndex(p => dist(p.x - m.x, p.y - m.y) < 5 / view.s); if (hit >= 0) { manPts.splice(hit, 1); renderManual(); } }
 
     function renderManual() {
       if (mode !== 2) return;
-
       applyViewBoxForMode();
-
-      const svg = document.getElementById('layer-draw');
-      svg.innerHTML = '';
-
+      const svg = document.getElementById('layer-draw'); svg.innerHTML = '';
       const grid = document.getElementById('layer-grid');
       grid.style.display = document.getElementById('m2_gen').checked ? 'block' : 'none';
-
-      // 修：pat.firstChild 會踩到 text node，直接把 AR 模式整個炸掉
-      const sc = getVal('m2_sc');
-      const gp = getVal('m2_gp') * sc;
-      const pat = document.getElementById('gridPat');
-      if (pat) {
-        pat.setAttribute('width', gp);
-        pat.setAttribute('height', gp);
-
-        const gridPath = pat.querySelector('path'); // <-- 修復點
-        if (gridPath) {
-          gridPath.setAttribute('d', `M ${gp} 0 L 0 0 0 ${gp}`);
-          gridPath.setAttribute('stroke-width', 1 / view.s);
-        }
-      }
-
-      const stk = 2 / view.s;
-      const grp = mkGrp(svg);
-      grp.setAttribute('transform', `scale(${sc})`);
+      const sc = getVal('m2_sc'), gp = getVal('m2_gp') * sc, pat = document.getElementById('gridPat');
+      if (pat) { pat.setAttribute('width', gp); pat.setAttribute('height', gp); const gpth = pat.querySelector('path'); if(gpth){ gpth.setAttribute('d', `M ${gp} 0 L 0 0 0 ${gp}`); gpth.setAttribute('stroke-width', 1 / view.s); } }
+      const stk = 2 / view.s, grp = mkGrp(svg); grp.setAttribute('transform', `scale(${sc})`);
 
       pathData = [];
       if (manPts.length) {
         let lp = manPts[0];
-        // 修：第一點補 f，避免統計時遇到 undefined
         pathData.push({ x: lp.x, y: lp.y, f: lp.f ?? 0 });
-
         addCir(grp, lp.x, lp.y, 3 / sc / view.s, "blue", "none", 0);
-
         for (let i = 1; i < manPts.length; i++) {
           let p = manPts[i];
           let col = p.f === 1 ? "#28a745" : (p.f === 2 ? "#dc3545" : "#999");
           let dash = p.f !== 1 ? `${5 / sc / view.s},${5 / sc / view.s}` : null;
-
           addLn(grp, lp.x, lp.y, p.x, p.y, col, stk / sc, dash);
           addCir(grp, p.x, p.y, 3 / sc / view.s, col, "none", 0);
-
           pathData.push({ x: p.x, y: p.y, f: p.f });
           lp = p;
         }
       }
+      
+      // Add Simulation Marker for AR
+      const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      marker.id = "sim-head"; marker.style.display="none"; 
+      grp.appendChild(marker); // Append to scaled group
 
       calcStats();
     }
 
-    function clearManual() {
-      manPts = [];
-      renderManual();
-    }
+    function clearManual() { manPts = []; renderManual(); stopSim(); }
 
-    // ===== 統計 / 下載 =====
     function calcStats() {
       let d1 = 0, d2 = 0, d0 = 0, cnt = 0;
-
       if (pathData.length > 1) {
-        let last = pathData[0];
-
-        // 從 (0,0) 到第一點算 Move
-        d0 += dist(last.x, last.y);
-
+        let last = pathData[0]; d0 += dist(last.x, last.y);
         for (let i = 1; i < pathData.length; i++) {
           let p = pathData[i];
           let d = dist(p.x - last.x, p.y - last.y);
-
-          if (p.f === 1) d1 += d;
-          else if (p.f === 2) d2 += d;
-          else d0 += d;
-
-          last = p;
-          cnt++;
+          if (p.f === 1) d1 += d; else if (p.f === 2) d2 += d; else d0 += d;
+          last = p; cnt++;
         }
       }
-
       document.getElementById('res_dist').innerText = ((d1 + d2 + d0) / 1000).toFixed(2) + " m";
-
       const vW = getVal('spd_w'), vJ = getVal('spd_j');
-      const t1 = vW > 0 ? d1 / vW : 0;
-      const t2 = vJ > 0 ? d2 / vJ : 0;
-      const t0 = vJ > 0 ? d0 / vJ : 0;
-      const tAcc = cnt * getVal('t_acc');
-      const totalT = t1 + t2 + t0 + tAcc;
-
+      const totalT = (vW>0?d1/vW:0) + (vJ>0?(d2+d0)/vJ:0) + (cnt * getVal('t_acc'));
       const m = Math.floor(totalT / 60), s = Math.floor(totalT % 60);
       document.getElementById('res_time').innerText = `${m}:${s.toString().padStart(2, '0')}`;
       document.getElementById('res_time_s').innerText = totalT.toFixed(2) + " s";
       document.getElementById('res_segs').innerText = cnt;
-
-      document.getElementById('det_f1').innerText = `${(d1 / 1000).toFixed(2)}m | ${t1.toFixed(1)}s`;
-      document.getElementById('det_f2').innerText = `${(d2 / 1000).toFixed(2)}m | ${t2.toFixed(1)}s`;
-      document.getElementById('det_f0').innerText = `${(d0 / 1000).toFixed(2)}m | ${t0.toFixed(1)}s`;
+      document.getElementById('det_f1').innerText = `${(d1 / 1000).toFixed(2)}m`;
+      document.getElementById('det_f2').innerText = `${(d2 / 1000).toFixed(2)}m`;
+      document.getElementById('det_f0').innerText = `${(d0 / 1000).toFixed(2)}m`;
     }
 
     function dlCSV() {
       let txt = "X,Y,Flag\n";
       pathData.forEach(p => txt += `${(p.x ?? 0).toFixed(3)},${(p.y ?? 0).toFixed(3)},${(p.f ?? 0)}\n`);
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv' }));
-      a.download = 'path_data.csv';
-      a.click();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv' })); a.download = 'path_data.csv'; a.click();
     }
-
     function dlSVG() {
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      if (pathData.length === 0) { minX = -100; maxX = 100; minY = -100; maxY = 100; }
-      else {
-        pathData.forEach(p => {
-          if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
-          if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
-        });
-      }
-
-      const pad = 10;
-      const vb = `${minX - pad} ${minY - pad} ${(maxX - minX) + pad * 2} ${(maxY - minY) + pad * 2}`;
+      let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+      if(pathData.length===0){ minX=-100; maxX=100; minY=-100; maxY=100; }
+      else{ pathData.forEach(p=>{ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y; }); }
+      const pad=10, vb=`${minX-pad} ${minY-pad} ${(maxX-minX)+pad*2} ${(maxY-minY)+pad*2}`;
       const content = document.getElementById('layer-draw').innerHTML;
       const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}">${content}</svg>`;
-
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([svgStr], { type: 'image/svg+xml' }));
-      a.download = 'preview.svg';
-      a.click();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([svgStr], { type: 'image/svg+xml' })); a.download = 'preview.svg'; a.click();
     }
 
-    // ===== Helpers =====
     function mkGrp(p) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); p.appendChild(g); return g; }
-    function addLn(p, x1, y1, x2, y2, c, w, d) {
-      const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      l.setAttribute("x1", x1); l.setAttribute("y1", y1);
-      l.setAttribute("x2", x2); l.setAttribute("y2", y2);
-      l.setAttribute("stroke", c); l.setAttribute("stroke-width", w);
-      if (d) l.setAttribute("stroke-dasharray", d);
-      p.appendChild(l);
-    }
-    function addCir(p, x, y, r, f, s, w, d) {
-      const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", r);
-      c.setAttribute("fill", f);
-      if (s) c.setAttribute("stroke", s);
-      if (w) c.setAttribute("stroke-width", w);
-      if (d) c.setAttribute("stroke-dasharray", d);
-      p.appendChild(c);
-    }
-    function addRect(p, x, y, w, h, f, s, sw, d) {
-      const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      r.setAttribute("x", x); r.setAttribute("y", y);
-      r.setAttribute("width", w); r.setAttribute("height", h);
-      r.setAttribute("fill", f);
-      r.setAttribute("stroke", s);
-      r.setAttribute("stroke-width", sw);
-      if (d) r.setAttribute("stroke-dasharray", d);
-      p.appendChild(r);
-    }
+    function addLn(p, x1, y1, x2, y2, c, w, d) { const l = document.createElementNS("http://www.w3.org/2000/svg", "line"); l.setAttribute("x1", x1); l.setAttribute("y1", y1); l.setAttribute("x2", x2); l.setAttribute("y2", y2); l.setAttribute("stroke", c); l.setAttribute("stroke-width", w); if (d) l.setAttribute("stroke-dasharray", d); p.appendChild(l); }
+    function addCir(p, x, y, r, f, s, w, d) { const c = document.createElementNS("http://www.w3.org/2000/svg", "circle"); c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", r); c.setAttribute("fill", f); if (s) c.setAttribute("stroke", s); if (w) c.setAttribute("stroke-width", w); if (d) c.setAttribute("stroke-dasharray", d); p.appendChild(c); }
+    function addRect(p, x, y, w, h, f, s, sw, d) { const r = document.createElementNS("http://www.w3.org/2000/svg", "rect"); r.setAttribute("x", x); r.setAttribute("y", y); r.setAttribute("width", w); r.setAttribute("height", h); r.setAttribute("fill", f); r.setAttribute("stroke", s); r.setAttribute("stroke-width", sw); if (d) r.setAttribute("stroke-dasharray", d); p.appendChild(r); }
     function dist(dx, dy) { return Math.sqrt(dx * dx + dy * dy); }
   </script>
 </body>
