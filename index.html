@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wafer Tool v39 (AR Path Width)</title>
+  <title>Wafer Path Generator (No AR)</title>
   <style>
+    /* --- 基礎樣式 --- */
     :root{
       --bg:#f4f4f9; --panel:#fff; --text:#333; --border:#ddd;
       --primary:#007ACC; --accent:#ff9800; --canvas:#fff;
@@ -18,24 +19,28 @@
       display:flex; align-items:center; padding:0 15px; font-weight:bold; flex-shrink:0; justify-content:space-between;
     }
     .container{ display:flex; flex:1; overflow:hidden; }
+    
+    /* 左側設定欄 */
     .sidebar{
-      width:400px; background:var(--panel); border-right:1px solid var(--border);
+      width:380px; background:var(--panel); border-right:1px solid var(--border);
       display:flex; flex-direction:column; padding:15px; overflow-y:auto; z-index:20;
       box-shadow:2px 0 5px rgba(0,0,0,0.05);
     }
+    
+    /* 右側畫布 */
     .main-view{ flex:1; display:flex; flex-direction:column; position:relative; background:#e0e0e0; }
     #canvas-window{
-      flex:1; position:relative; overflow:hidden; cursor:crosshair; background:var(--canvas);
+      flex:1; position:relative; overflow:hidden; cursor:default; background:var(--canvas);
     }
 
+    /* 畫布內容 */
     #world{ position:absolute; top:0; left:0; width:0; height:0; transform-origin:0 0; will-change:transform; }
     .layer{ position:absolute; top:0; left:0; overflow:visible; }
-    #layer-video{ width:640px; height:480px; top:0; left:0; opacity:0.5; pointer-events:none; display:none; transform-origin:0 0; z-index:0; }
-    #layer-grid{ width:100000px; height:100000px; pointer-events:none; z-index:1; }
-    #layer-draw{ width:100000px; height:100000px; pointer-events:none; z-index:2; }
+    #layer-draw{ pointer-events:none; } /* SVG 層 */
 
+    /* 底部資訊列 */
     .footer{
-      height:140px; background:var(--panel); border-top:1px solid var(--border);
+      height:130px; background:var(--panel); border-top:1px solid var(--border);
       padding:10px 20px; display:flex; gap:15px; z-index:30; flex-shrink:0;
     }
     .card{
@@ -46,10 +51,13 @@
     .row{ display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px; }
     .val{ font-weight:bold; font-family:monospace; }
 
+    /* UI 元件 */
     .sec-title{ font-size:13px; font-weight:bold; color:#555; border-left:3px solid var(--primary); padding-left:6px; margin:15px 0 5px 0; }
     .in-row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:13px; }
     input[type=number], select{ width:80px; text-align:right; padding:3px; border:1px solid #ccc; border-radius:3px; }
     input[type=range]{ flex:1; margin-left:10px; cursor: pointer; }
+    
+    /* 按鈕 */
     button{
       flex:1; padding:6px; border:none; border-radius:4px; cursor:pointer; color:white;
       font-weight:bold; font-size:12px; transition:0.2s;
@@ -58,122 +66,69 @@
     .btn-grp{ display:flex; gap:5px; margin-top:10px; }
     .bg-blue{ background:var(--primary); } .bg-green{ background:#28a745; } .bg-red{ background:#dc3545; } .bg-gray{ background:#666; color:white; }
 
-    .mode-tabs{ display:flex; gap:5px; margin-bottom:10px; }
-    .tab{
-      flex:1; padding:8px; text-align:center; border:1px solid #ccc; cursor:pointer;
-      border-radius:4px; font-size:13px; background:#eee;
-    }
-    .tab.active{ background:var(--primary); color:white; border-color:var(--primary); }
-
+    /* 懸浮工具列 */
     .overlay{
       position:absolute; top:10px; left:50%; transform:translateX(-50%);
       background:rgba(255,255,255,0.9); padding:5px 15px; border-radius:20px;
       box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; gap:10px; z-index:50;
     }
-    .help-box{
-      position:absolute; bottom:10px; right:10px; width:150px;
-      background:rgba(255,255,255,0.9); padding:10px; border-radius:8px;
-      box-shadow:0 2px 10px rgba(0,0,0,0.1); font-size:11px; z-index:50;
-      display:none; border:1px solid #ccc;
-    }
-
-    .g-param{ display:none; }
     
-    .player-ctrl { background: #fff3e0; padding: 8px; border-radius: 6px; border: 1px solid #ffcc80; margin-top: 10px; }
-    .sim-setting { background: #e3f2fd; padding: 8px; border-radius: 6px; border: 1px solid #90caf9; margin-top: 5px; }
+    /* 播放器樣式 */
+    .player-ctrl { background: #fff3e0; padding: 8px; border-radius: 6px; border: 1px solid #ffcc80; margin-top: 15px; }
     
+    /* SVG 線條不隨縮放變粗 */
     path, line, circle, rect { vector-effect: non-scaling-stroke; }
   </style>
 </head>
 
 <body>
   <div class="header">
-    <span>Wafer Tool v39 <small style="font-weight:normal;color:#666;">(Path Width)</small></span>
+    <span>Wafer Path Generator <small style="font-weight:normal;color:#666;">(v1.0 No AR)</small></span>
   </div>
 
   <div class="container">
     <div class="sidebar">
-      <div class="mode-tabs">
-        <div class="tab" id="tab-1" onclick="setMode(1)">1. 晶圓自動生成</div>
-        <div class="tab" id="tab-2" onclick="setMode(2)">2. 手繪 AR 模式</div>
-      </div>
+      
+      <div class="sec-title" style="margin-top:0;">1. 全域顯示 (Display)</div>
+      <div class="in-row"><label>線條粗細 (px)</label><input type="number" id="v_stroke" value="0.1" step="0.1" onchange="render()"></div>
+      <div class="in-row"><label><input type="checkbox" id="v_grid" checked onchange="render()"> 顯示晶片網格</label></div>
+      <div class="in-row"><label>Offset X (µm)</label><input type="number" id="off_x" value="0" onchange="render()"></div>
+      <div class="in-row"><label>Offset Y (µm)</label><input type="number" id="off_y" value="0" onchange="render()"></div>
 
-      <div id="common-ui">
-        <div class="sec-title">全域顯示 (Global)</div>
-        <div class="in-row"><label>線條粗細 (px)</label><input type="number" id="v_stroke" value="0.1" step="0.1" onchange="render()"></div>
-        <div class="in-row"><label><input type="checkbox" id="v_grid" checked onchange="render()"> 顯示晶片網格</label></div>
-        <div class="in-row"><label>Offset X (µm)</label><input type="number" id="off_x" value="0" onchange="render()"></div>
-        <div class="in-row"><label>Offset Y (µm)</label><input type="number" id="off_y" value="0" onchange="render()"></div>
+      <div class="sec-title">2. 運動參數 (Motion)</div>
+      <div class="in-row"><label>作業速 (mm/s)</label><input type="number" id="spd_w" value="30" onchange="render()"></div>
+      <div class="in-row"><label>快移速 (mm/s)</label><input type="number" id="spd_j" value="50" onchange="render()"></div>
+      <div class="in-row"><label>加減速 (s)</label><input type="number" id="t_acc" value="0.017" step="0.001" onchange="render()"></div>
 
-        <div class="sec-title">運動參數 (Motion)</div>
-        <div class="in-row"><label>作業速 (mm/s)</label><input type="number" id="spd_w" value="30" onchange="render()"></div>
-        <div class="in-row"><label>快移速 (mm/s)</label><input type="number" id="spd_j" value="50" onchange="render()"></div>
-        <div class="in-row"><label>加減速 (s)</label><input type="number" id="t_acc" value="0.017" step="0.001" onchange="render()"></div>
-      </div>
+      <div class="sec-title">3. 晶圓設定 (Wafer)</div>
+      <div class="in-row"><label>直徑 (in)</label><input type="number" id="w_dia" value="8.0" onchange="render()"></div>
+      <div class="in-row"><label>內縮 (mm)</label><input type="number" id="w_margin" value="5.0" onchange="render()"></div>
+      <div class="in-row"><label>晶片 X (mm)</label><input type="number" id="w_dx" value="1.645" onchange="render()"></div>
+      <div class="in-row"><label>晶片 Y (mm)</label><input type="number" id="w_dy" value="0.945" onchange="render()"></div>
+      <div class="in-row"><label>切割道 (mm)</label><input type="number" id="w_sc" value="0.055" step="0.001" onchange="render()"></div>
+      <div class="in-row"><label>線段長 (mm)</label><input type="number" id="w_seg" value="0.4" onchange="render()"></div>
 
-      <div id="p-m1" class="g-param">
-        <div class="sec-title">晶圓設定 (Wafer)</div>
-        <div class="in-row"><label>直徑 (in)</label><input type="number" id="w_dia" value="8.0" onchange="render()"></div>
-        <div class="in-row"><label>內縮 (mm)</label><input type="number" id="w_margin" value="5.0" onchange="render()"></div>
-        <div class="in-row"><label>晶片 X (mm)</label><input type="number" id="w_dx" value="1.645" onchange="render()"></div>
-        <div class="in-row"><label>晶片 Y (mm)</label><input type="number" id="w_dy" value="0.945" onchange="render()"></div>
-        <div class="in-row"><label>切割道 (mm)</label><input type="number" id="w_sc" value="0.055" step="0.001" onchange="render()"></div>
-        <div class="in-row"><label>線段長 (mm)</label><input type="number" id="w_seg" value="0.4" onchange="render()"></div>
+      <div class="sec-title">4. 路徑策略 (Strategy)</div>
+      <div class="in-row"><label>起點</label><select id="m1_corn" onchange="render()"><option value="tl">TL (左上)</option><option value="tr">TR (右上)</option><option value="bl">BL (左下)</option><option value="br">BR (右下)</option></select></div>
+      <div class="in-row"><label>類型</label><select id="m1_pat" onchange="render()"><option value="line">Line (線段)</option><option value="zigzag">Zig (Z字)</option></select></div>
+      <div class="in-row"><label>方式</label><select id="m1_trav" onchange="render()"><option value="snake">Snake (蛇行)</option><option value="jump">Jump (跳躍)</option></select></div>
+      <div class="in-row" style="margin-top:10px;background:#e3f2fd;padding:5px;"><label>有效晶片數:</label><span id="m1_cnt" style="font-weight:bold; color:blue;">0</span></div>
 
-        <div class="sec-title">策略 (Strategy)</div>
-        <div class="in-row"><label>起點</label><select id="m1_corn" onchange="render()"><option value="tl">TL (左上)</option><option value="tr">TR</option><option value="bl">BL</option><option value="br">BR</option></select></div>
-        <div class="in-row"><label>類型</label><select id="m1_pat" onchange="render()"><option value="line">Line (線段)</option><option value="zigzag">Zig (Z字)</option></select></div>
-        <div class="in-row"><label>方式</label><select id="m1_trav" onchange="render()"><option value="snake">Snake (蛇行)</option><option value="jump">Jump (跳躍)</option></select></div>
-        <div class="in-row" style="margin-top:10px;background:#e3f2fd;padding:5px;"><label>晶片數:</label><span id="m1_cnt" style="font-weight:bold;">0</span></div>
-      </div>
-
-      <div id="p-m2" class="g-param">
-        <div class="sec-title">手繪設定 (Manual AR)</div>
-        <div class="in-row"><label>Webcam</label><span><button class="bg-green" style="width:40px;" onclick="startCam()">ON</button> <button class="bg-red" style="width:40px;" onclick="stopCam()">OFF</button></span></div>
-        <div class="in-row"><label>Cam透明度</label><input type="range" id="m2_op" min="0" max="1" step="0.1" value="0.5" oninput="updCam()"></div>
-        <div class="in-row"><label>校正 (Px/mm)</label><input type="number" id="m2_sc" value="10" onchange="renderManual()"></div>
-
-        <div class="sec-title">網格與工具</div>
-        <div class="in-row"><label><input type="checkbox" id="m2_gen" checked onchange="renderManual()"> 顯示網格</label><input type="number" id="m2_gp" value="10" style="width:50px;" onchange="renderManual()"></div>
-        <div class="in-row"><label><input type="checkbox" id="m2_ortho"> 正交 (Shift)</label></div>
-        <div class="in-row"><label>類型</label><select id="m2_type"><option value="1">Disp (噴塗)</option><option value="0">Move (移動)</option><option value="2">Jump (快移)</option></select></div>
-        
-        <div class="in-row">
-            <label>路徑粗細</label>
-            <input type="range" id="m2_path_w" min="1" max="20" step="1" value="2" oninput="document.getElementById('m2_path_w_val').innerText=this.value+'px'; renderManual()">
-            <span id="m2_path_w_val" style="font-size:11px; width:35px; text-align:right;">2px</span>
-        </div>
-
-        <button class="bg-red" style="width:100%;margin-top:5px;" onclick="clearManual()">清除畫布</button>
-
-        <div class="player-ctrl">
-            <div style="font-size:12px; font-weight:bold; color:var(--accent); margin-bottom:5px;">路徑預覽 (Preview)</div>
-            <div class="in-row">
-                <button class="bg-green" onclick="playSim()" id="btn_play">▶ 播放</button>
-                <button class="bg-red" onclick="stopSim()">■ 停止</button>
-            </div>
-            <div class="in-row">
-                <label>進度</label>
-                <input type="range" id="sim_progress" min="0" max="100" value="0" step="0.1" oninput="seekSim(this.value)">
-            </div>
-            <div class="in-row">
-                <label>速度</label>
-                <input type="range" id="sim_speed" min="1" max="50" value="5">
-                <span id="sim_spd_val" style="font-size:11px; width:30px; text-align:right;">5x</span>
-            </div>
-        </div>
-
-        <div class="sim-setting">
-            <div style="font-size:12px; font-weight:bold; color:#007ACC; margin-bottom:5px;">模擬點設定 (Sim Head)</div>
-            <div class="in-row">
-                <label>大小 (Size)</label>
-                <input type="range" id="sim_size" min="1" max="30" value="6" oninput="updateSimMarker()">
-            </div>
-            <div class="in-row">
-                <label>透明 (Opacity)</label>
-                <input type="range" id="sim_alpha" min="0.1" max="1.0" step="0.1" value="0.8" oninput="updateSimMarker()">
-            </div>
-        </div>
+      <div class="player-ctrl">
+          <div style="font-size:12px; font-weight:bold; color:var(--accent); margin-bottom:5px;">路徑模擬 (Sim)</div>
+          <div class="in-row">
+              <button class="bg-green" onclick="playSim()" id="btn_play">▶ 播放</button>
+              <button class="bg-red" onclick="stopSim()">■ 停止</button>
+          </div>
+          <div class="in-row">
+              <label>進度</label>
+              <input type="range" id="sim_progress" min="0" max="100" value="0" step="0.1" oninput="seekSim(this.value)">
+          </div>
+          <div class="in-row">
+              <label>速度</label>
+              <input type="range" id="sim_speed" min="1" max="50" value="5">
+              <span id="sim_spd_val" style="font-size:11px; width:30px; text-align:right;">5x</span>
+          </div>
       </div>
 
       <div class="btn-grp">
@@ -185,151 +140,205 @@
     <div class="main-view">
       <div id="canvas-window">
         <div class="overlay">
-          <button class="bg-gray" style="background:none;color:#333;border:1px solid #ccc;" onclick="render()">🔄 更新</button>
-          <button class="bg-gray" style="background:none;color:#333;border:1px solid #ccc;" onclick="autoFit()">⛶ 置中</button>
+          <button class="bg-gray" style="background:none;color:#333;border:1px solid #ccc;" onclick="render()">🔄 更新畫面</button>
+          <button class="bg-gray" style="background:none;color:#333;border:1px solid #ccc;" onclick="autoFit()">⛶ 自動置中</button>
         </div>
 
         <div id="world">
-          <video id="layer-video" autoplay playsinline muted class="layer"></video>
-
-          <svg id="layer-grid" class="layer" xmlns="http://www.w3.org/2000/svg" viewBox="-50000 -50000 100000 100000">
-            <defs>
-              <pattern id="gridPat" width="100" height="100" patternUnits="userSpaceOnUse">
-                <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#ccc" stroke-width="1"/>
-              </pattern>
-            </defs>
-            <rect id="gridRect" x="-50000" y="-50000" width="100000" height="100000" fill="url(#gridPat)"/>
-          </svg>
-
-          <svg id="layer-draw" class="layer" xmlns="http://www.w3.org/2000/svg" viewBox="-50000 -50000 100000 100000"></svg>
-        </div>
-
-        <div class="help-box" id="manual-help">
-          <b>操作指南:</b>
-          <ul><li>左鍵: 新增</li><li>拖曳: 移動</li><li>右鍵: 刪除</li><li>滾輪: 縮放</li><li>中鍵: 平移</li></ul>
+          <svg id="layer-draw" class="layer" xmlns="http://www.w3.org/2000/svg" style="overflow:visible"></svg>
         </div>
       </div>
 
       <div class="footer">
         <div class="card">
-          <div class="card-t">總覽 (Totals)</div>
-          <div class="row"><span>距離:</span><span class="val" id="res_dist">0.00 m</span></div>
-          <div class="row"><span>時間:</span><span class="val" id="res_time_s">0.00 s</span></div>
-          <div class="row"><span>線段:</span><span class="val" id="res_segs">0</span></div>
+          <div class="card-t">估算結果 (Estimation)</div>
+          <div class="row"><span>總距離:</span><span class="val" id="res_dist">0.00 m</span></div>
+          <div class="row"><span>總時間:</span><span class="val" id="res_time_s">0.00 s</span></div>
+          <div class="row"><span>指令數:</span><span class="val" id="res_segs">0</span></div>
           <div style="font-size:18px;color:var(--accent);text-align:center;margin-top:5px;font-weight:bold;" id="res_time">0:00</div>
         </div>
         <div class="card" style="flex:2;">
-          <div class="card-t">明細 (Details)</div>
+          <div class="card-t">路徑明細 (Details)</div>
           <div class="row" style="color:#28a745;"><span>■ 噴塗 (F1)</span><span class="val" id="det_f1">0 m | 0 s</span></div>
           <div class="row" style="color:#dc3545;"><span>■ 快移 (F2)</span><span class="val" id="det_f2">0 m | 0 s</span></div>
-          <div class="row" style="color:#666;"><span>■ 移動 (F0)</span><span class="val" id="det_f0">0 m | 0 s</span></div>
+          <div class="row" style="color:#666;"><span>■ 起始 (F0)</span><span class="val" id="det_f0">0 m | 0 s</span></div>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    const ORG = 50000;
-    let mode = 1;
-    let pathData = []; 
-    let manPts = []; 
-
+    // --- 變數 ---
+    let pathData = []; // {x, y, f}
     let view = { x: 0, y: 0, s: 1.0 };
     let isPan = false, startX = 0, startY = 0;
-    let drag = { active: false, idx: -1 };
-    let stream = null;
+    
+    // 模擬狀態
+    let simState = { playing: false, idx: 0, reqId: null };
 
-    let simState = {
-        playing: false,
-        idx: 0, 
-        reqId: null
-    };
-
+    // --- 初始化 ---
     window.onload = () => {
       initEvents();
-      setMode(1);
       setTimeout(autoFit, 100);
-      window.addEventListener('resize', () => autoFit());
+      window.addEventListener('resize', autoFit);
+      render();
+      
       document.getElementById('sim_speed').oninput = function() {
           document.getElementById('sim_spd_val').innerText = this.value + 'x';
       };
     };
 
-    function applyViewBoxForMode() {
-      const grid = document.getElementById('layer-grid');
-      const draw = document.getElementById('layer-draw');
-      const gridRect = document.getElementById('gridRect');
-      const vb = (mode===1) ? `-${ORG} -${ORG} ${ORG*2} ${ORG*2}` : `0 0 ${ORG*2} ${ORG*2}`;
-      const xy = (mode===1) ? -ORG : 0;
-      grid.setAttribute('viewBox', vb);
-      draw.setAttribute('viewBox', vb);
-      gridRect.setAttribute('x', xy); gridRect.setAttribute('y', xy);
-    }
-
-    function setMode(id) {
-      stopSim(); 
-      mode = id;
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.getElementById(`tab-${id}`).classList.add('active');
-      document.getElementById('p-m1').style.display = (id === 1) ? 'block' : 'none';
-      document.getElementById('p-m2').style.display = (id === 2) ? 'block' : 'none';
-      const isMan = (id === 2);
-      document.getElementById('manual-help').style.display = isMan ? 'block' : 'none';
-      document.getElementById('layer-video').style.display = isMan ? 'block' : 'none';
-      applyViewBoxForMode();
-      if (isMan) { startCam(); updCam(); renderManual(); } else { stopCam(); render(); }
-      autoFit();
-    }
-
     function getVal(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
     function getStr(id) { return document.getElementById(id)?.value || ""; }
 
+    // --- 視圖操作 ---
     function initEvents() {
       const win = document.getElementById('canvas-window');
+
       win.addEventListener('wheel', e => {
         e.preventDefault();
         const d = e.deltaY > 0 ? 0.9 : 1.1;
         const rect = win.getBoundingClientRect();
-        const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
         const ns = view.s * d;
         view.x = mx - (mx - view.x) * (ns / view.s);
         view.y = my - (my - view.y) * (ns / view.s);
         view.s = ns;
         updWorld();
-        if(mode===2) renderManual(); 
       });
+
       win.addEventListener('mousedown', e => {
-        if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+        if (e.button === 0 || e.button === 1) { // 左鍵或中鍵平移
           isPan = true; startX = e.clientX; startY = e.clientY;
           win.style.cursor = 'grabbing'; e.preventDefault();
-        } else if (e.button === 0 && mode === 2) onManDown(e);
+        }
       });
+
       window.addEventListener('mousemove', e => {
         if (isPan) {
           view.x += (e.clientX - startX); view.y += (e.clientY - startY);
-          startX = e.clientX; startY = e.clientY; updWorld();
-        } else if (mode === 2 && drag.active) onManMove(e);
+          startX = e.clientX; startY = e.clientY;
+          updWorld();
+        }
       });
-      window.addEventListener('mouseup', () => { isPan = false; drag.active = false; win.style.cursor = (mode===2)?'crosshair':'default'; });
-      win.addEventListener('contextmenu', e => { if (mode === 2) { e.preventDefault(); onManRight(e); } });
+
+      window.addEventListener('mouseup', () => { isPan = false; win.style.cursor = 'default'; });
     }
 
-    function updWorld() { document.getElementById('world').style.transform = `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.s})`; }
+    function updWorld() {
+      document.getElementById('world').style.transform = `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.s})`;
+    }
 
     function autoFit() {
       const win = document.getElementById('canvas-window');
       const w = win.clientWidth, h = win.clientHeight;
-      if (mode === 1) {
-        const dia = getVal('w_dia') * 25.4 || 200;
-        view.s = Math.min(w / (dia * 1.2), h / (dia * 1.2));
-        view.x = (w / 2) - (ORG * view.s); view.y = (h / 2) - (ORG * view.s);
-      } else {
-        view.x = 0; view.y = 0; view.s = 1.0;
-      }
+      const dia = getVal('w_dia') * 25.4 || 200;
+      view.s = Math.min(w / (dia * 1.2), h / (dia * 1.2));
+      view.x = w / 2;
+      view.y = h / 2;
       updWorld();
     }
 
-    // ===== Playback =====
+    // --- 核心渲染與路徑生成 ---
+    function render() {
+      stopSim(); // 重繪時停止播放
+      const svg = document.getElementById('layer-draw'); 
+      svg.innerHTML = '';
+
+      const stk = getVal('v_stroke') || 1;
+      const showGrid = document.getElementById('v_grid').checked;
+      const ox = getVal('off_x') / 1000, oy = getVal('off_y') / 1000;
+
+      // 畫座標軸
+      addLn(svg, -1000, 0, 1000, 0, "#999", stk);
+      addLn(svg, 0, -1000, 0, 1000, "#999", stk);
+
+      pathData = [];
+      drawWaferLogic(svg, ox, oy, showGrid, stk);
+      
+      // 加入模擬光標 (預設隱藏)
+      const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      marker.id = "sim-head"; marker.style.display="none"; 
+      svg.appendChild(marker);
+
+      calcStats();
+    }
+
+    function drawWaferLogic(svg, ox, oy, grid, stk) {
+      const dia = getVal('w_dia') * 25.4;
+      const r = (dia - getVal('w_margin')) / 2;
+      const dx = getVal('w_dx'), dy = getVal('w_dy'), sc = getVal('w_sc');
+      const px = dx + sc, py = dy + sc;
+
+      // 畫晶圓框
+      addCir(svg, 0, 0, dia / 2, "none", "#ccc", stk); // 外圓
+      addCir(svg, 0, 0, r, "none", "#ff5252", stk, "5,5"); // 內縮範圍
+
+      let dies = [];
+      const nx = Math.ceil(r / px), ny = Math.ceil(r / py);
+      
+      // 1. 生成晶片網格
+      for (let j = -ny; j <= ny; j++) for (let i = -nx; i <= nx; i++) {
+        let cx = i * px, cy = j * py;
+        // 檢查四角是否都在內縮範圍內
+        if (dist(cx-dx/2, cy-dy/2)>r || dist(cx+dx/2, cy-dy/2)>r || dist(cx-dx/2, cy+dy/2)>r || dist(cx+dx/2, cy+dy/2)>r) continue;
+
+        if (grid) addRect(svg, cx - dx / 2, cy - dy / 2, dx, dy, "none", "rgba(0,120,215,0.2)", stk / 2);
+        dies.push({ i, j, cx, cy });
+      }
+      document.getElementById('m1_cnt').innerText = dies.length;
+
+      // 2. 排序 (Sort)
+      const corn = getStr('m1_corn');
+      dies.sort((a, b) => {
+        let dY = (corn[0] === 't') ? a.j - b.j : b.j - a.j;
+        if (dY !== 0) return dY;
+        return (corn[1] === 'l') ? a.i - b.i : b.i - a.i;
+      });
+
+      // 3. 分組 (Group Rows)
+      let rows = [], cr = [], cj = dies[0]?.j;
+      dies.forEach(d => { if (d.j !== cj) { rows.push(cr); cr = []; cj = d.j; } cr.push(d); });
+      if (cr.length) rows.push(cr);
+
+      // 4. 生成路徑 (Generate Path)
+      const trav = getStr('m1_trav');
+      const seg = getVal('w_seg');
+      const grp = mkGrp(svg);
+
+      // 起始點 (0,0)
+      let lastP = {x:0, y:0};
+
+      rows.forEach((row, i) => {
+        let isRev = (trav === 'snake' && i % 2 !== 0);
+        let pRow = [...row]; if (isRev) pRow.reverse();
+
+        pRow.forEach(d => {
+          // 線段模式：每個晶片畫一條線
+          // 如果是 Zigzag，這裡的邏輯需調整，目前以 Line 為主
+          let sx = d.cx - seg / 2, ex = d.cx + seg / 2;
+          if (isRev) { let t = sx; sx = ex; ex = t; } // 蛇行時反向畫
+          
+          let p1 = { x: sx + ox, y: d.cy + oy }; // Start of Line
+          let p2 = { x: ex + ox, y: d.cy + oy }; // End of Line
+
+          // 快移 (Jump) 到下一個線段起點
+          if (dist(lastP.x - p1.x, lastP.y - p1.y) > 0.001) {
+             addLn(grp, lastP.x, lastP.y, p1.x, p1.y, "#dc3545", stk, "2,1"); // Red dashed
+             pathData.push({ ...p1, f: 2 }); // f=2: Jump
+          }
+
+          // 噴塗 (Dispense)
+          addLn(grp, p1.x, p1.y, p2.x, p2.y, "#28a745", stk); // Green solid
+          pathData.push({ ...p2, f: 1 }); // f=1: Dispense
+          
+          lastP = p2;
+        });
+      });
+    }
+
+    // --- 模擬播放邏輯 ---
     function playSim() {
         if(pathData.length < 2) return;
         if(simState.playing) {
@@ -363,192 +372,42 @@
         updateSimMarker();
         simState.reqId = requestAnimationFrame(simLoop);
     }
-    
     function updateSimMarker() {
         const marker = document.getElementById('sim-head');
         if(!marker || pathData.length < 1) return;
-
         const i = Math.floor(simState.idx);
         const t = simState.idx - i;
-        const p1 = pathData[i];
+        const p1 = i===0 ? {x:0, y:0, f:0} : pathData[i]; // Start from 0,0 if idx=0
         const p2 = pathData[Math.min(i+1, pathData.length-1)];
 
         const cx = p1.x + (p2.x - p1.x) * t;
         const cy = p1.y + (p2.y - p1.y) * t;
 
-        marker.setAttribute('cx', cx);
-        marker.setAttribute('cy', cy);
+        marker.setAttribute('cx', cx); marker.setAttribute('cy', cy);
         
-        const size = parseFloat(document.getElementById('sim_size').value);
-        const alpha = parseFloat(document.getElementById('sim_alpha').value);
-
-        if(p2.f === 1) {
-            marker.setAttribute('fill', '#0f0'); 
-            marker.setAttribute('fill-opacity', alpha);
-            marker.setAttribute('stroke-opacity', alpha);
-        } else {
-            marker.setAttribute('fill', 'none'); 
-            marker.setAttribute('fill-opacity', '0');
+        if(p2.f === 1) { // Dispensing
+            marker.setAttribute('fill', '#0f0'); marker.setAttribute('fill-opacity', 1);
+        } else { // Jumping
+            marker.setAttribute('fill', 'none'); marker.setAttribute('fill-opacity', 0);
             marker.setAttribute('stroke', 'red');
-            marker.setAttribute('stroke-opacity', alpha);
         }
-        marker.setAttribute('r', size / view.s); 
+        marker.setAttribute('r', 5 / view.s); 
         marker.setAttribute('stroke-width', 2 / view.s);
         marker.style.display = 'block';
     }
 
-    // ===== Render (Mode 1) =====
-    function render() {
-      if (mode === 2) { renderManual(); return; }
-      applyViewBoxForMode();
-      const svg = document.getElementById('layer-draw'); svg.innerHTML = '';
-      const stk = getVal('v_stroke') || 1;
-      const showGrid = document.getElementById('v_grid').checked;
-      const ox = getVal('off_x') / 1000, oy = getVal('off_y') / 1000;
-      document.getElementById('layer-grid').style.display = 'none';
-
-      addLn(svg, -1000, 0, 1000, 0, "#999", stk);
-      addLn(svg, 0, -1000, 0, 1000, "#999", stk);
-
-      pathData = [];
-      drawWaferLogic(svg, ox, oy, showGrid, stk);
-      
-      const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      marker.id = "sim-head"; marker.style.display="none"; marker.setAttribute("stroke","black");
-      svg.appendChild(marker);
-
-      calcStats();
-    }
-
-    function drawWaferLogic(svg, ox, oy, grid, stk) {
-      const dia = getVal('w_dia') * 25.4;
-      const r = (dia - getVal('w_margin')) / 2;
-      const dx = getVal('w_dx'), dy = getVal('w_dy'), sc = getVal('w_sc');
-      const px = dx + sc, py = dy + sc;
-
-      addCir(svg, 0, 0, dia / 2, "none", "#ccc", stk);
-      addCir(svg, 0, 0, r, "none", "red", stk, "5,5");
-
-      let dies = [];
-      const nx = Math.ceil(r / px), ny = Math.ceil(r / py);
-      for (let j = -ny; j <= ny; j++) for (let i = -nx; i <= nx; i++) {
-        let cx = i * px, cy = j * py;
-        if (dist(cx-dx/2, cy-dy/2)>r || dist(cx+dx/2, cy-dy/2)>r || dist(cx-dx/2, cy+dy/2)>r || dist(cx+dx/2, cy+dy/2)>r) continue;
-        if (grid) addRect(svg, cx - dx / 2, cy - dy / 2, dx, dy, "none", "rgba(0,120,215,0.2)", stk / 2);
-        dies.push({ i, j, cx, cy });
-      }
-      document.getElementById('m1_cnt').innerText = dies.length;
-
-      const corn = getStr('m1_corn');
-      dies.sort((a, b) => {
-        let dY = (corn[0] === 't') ? a.j - b.j : b.j - a.j;
-        if (dY !== 0) return dY;
-        return (corn[1] === 'l') ? a.i - b.i : b.i - a.i;
-      });
-
-      let rows = [], cr = [], cj = dies[0]?.j;
-      dies.forEach(d => { if (d.j !== cj) { rows.push(cr); cr = []; cj = d.j; } cr.push(d); });
-      if (cr.length) rows.push(cr);
-
-      const trav = getStr('m1_trav'), seg = getVal('w_seg'), grp = mkGrp(svg);
-
-      rows.forEach((row, i) => {
-        let isRev = (trav === 'snake' && i % 2 !== 0);
-        let pRow = [...row]; if (isRev) pRow.reverse();
-        pRow.forEach(d => {
-          let sx = d.cx - seg / 2, ex = d.cx + seg / 2;
-          if (isRev) { let t = sx; sx = ex; ex = t; }
-          let p1 = { x: sx + ox, y: d.cy + oy }, p2 = { x: ex + ox, y: d.cy + oy };
-          if (pathData.length > 0) {
-            let last = pathData[pathData.length - 1];
-            if (dist(last.x - p1.x, last.y - p1.y) > 0.001) {
-              addLn(grp, last.x, last.y, p1.x, p1.y, (trav==='jump'||pathData[pathData.length-1].f===2)?"red":"#999", stk, "2,1");
-              pathData.push({ ...p1, f: 2 });
-            }
-          } else pathData.push({ ...p1, f: 2 });
-          addLn(grp, p1.x, p1.y, p2.x, p2.y, "#28a745", stk);
-          pathData.push({ ...p2, f: 1 });
-        });
-      });
-    }
-
-    // ===== Mode2 (AR) =====
-    async function startCam() {
-      const v = document.getElementById('layer-video'); v.muted = true;
-      if (stream && v.srcObject) { v.style.display = 'block'; updCam(); return; }
-      try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); } 
-      catch (e1) { try { stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); } catch (e2) {} }
-      v.srcObject = stream; v.style.display = 'block'; updCam();
-      try { await v.play(); } catch (e) { }
-    }
-    function stopCam() { const v = document.getElementById('layer-video'); if (v.srcObject) { v.srcObject.getTracks().forEach(t => t.stop()); v.srcObject = null; } v.style.display = 'none'; stream = null; }
-    function updCam() { document.getElementById('layer-video').style.opacity = document.getElementById('m2_op').value; }
-    function getManPos(e) { const r = document.getElementById('canvas-window').getBoundingClientRect(); const sc = getVal('m2_sc'); const mx = e.clientX - r.left, my = e.clientY - r.top; return { x: (mx - view.x) / view.s / sc, y: (my - view.y) / view.s / sc }; }
-    function onManDown(e) {
-      const m = getManPos(e); const hit = manPts.findIndex(p => dist(p.x - m.x, p.y - m.y) < 5 / view.s);
-      if (hit >= 0) { drag.active = true; drag.idx = hit; } else {
-        let pt = { ...m };
-        if (manPts.length && (e.shiftKey || document.getElementById('m2_ortho').checked)) {
-          const last = manPts[manPts.length - 1];
-          if (Math.abs(m.x - last.x) > Math.abs(m.y - last.y)) pt.y = last.y; else pt.x = last.x;
-        }
-        manPts.push({ x: pt.x, y: pt.y, f: parseInt(getStr('m2_type')) });
-        renderManual();
-      }
-    }
-    function onManMove(e) { const m = getManPos(e); manPts[drag.idx].x = m.x; manPts[drag.idx].y = m.y; renderManual(); }
-    function onManRight(e) { const m = getManPos(e); const hit = manPts.findIndex(p => dist(p.x - m.x, p.y - m.y) < 5 / view.s); if (hit >= 0) { manPts.splice(hit, 1); renderManual(); } }
-
-    function renderManual() {
-      if (mode !== 2) return;
-      applyViewBoxForMode();
-      const svg = document.getElementById('layer-draw'); svg.innerHTML = '';
-      const grid = document.getElementById('layer-grid');
-      grid.style.display = document.getElementById('m2_gen').checked ? 'block' : 'none';
-      const sc = getVal('m2_sc'), gp = getVal('m2_gp') * sc, pat = document.getElementById('gridPat');
-      if (pat) { pat.setAttribute('width', gp); pat.setAttribute('height', gp); const gpth = pat.querySelector('path'); if(gpth){ gpth.setAttribute('d', `M ${gp} 0 L 0 0 0 ${gp}`); gpth.setAttribute('stroke-width', 1 / view.s); } }
-      const stk = 2 / view.s, grp = mkGrp(svg); grp.setAttribute('transform', `scale(${sc})`);
-
-      // Read Path Width setting
-      const userPathW = parseFloat(document.getElementById('m2_path_w').value) || 2;
-      const pathStk = userPathW / view.s; 
-
-      pathData = [];
-      if (manPts.length) {
-        let lp = manPts[0];
-        pathData.push({ x: lp.x, y: lp.y, f: lp.f ?? 0 });
-        addCir(grp, lp.x, lp.y, 3 / sc / view.s, "blue", "none", 0);
-        for (let i = 1; i < manPts.length; i++) {
-          let p = manPts[i];
-          let col = p.f === 1 ? "#28a745" : (p.f === 2 ? "#dc3545" : "#999");
-          let dash = p.f !== 1 ? `${5 / sc / view.s},${5 / sc / view.s}` : null;
-          addLn(grp, lp.x, lp.y, p.x, p.y, col, pathStk / sc, dash); // Use dynamic width
-          addCir(grp, p.x, p.y, 3 / sc / view.s, col, "none", 0);
-          pathData.push({ x: p.x, y: p.y, f: p.f });
-          lp = p;
-        }
-      }
-      
-      const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      marker.id = "sim-head"; marker.style.display="none"; 
-      grp.appendChild(marker); 
-
-      calcStats();
-    }
-
-    function clearManual() { manPts = []; renderManual(); stopSim(); }
-
+    // --- 統計與匯出 ---
     function calcStats() {
       let d1 = 0, d2 = 0, d0 = 0, cnt = 0;
-      if (pathData.length > 1) {
-        let last = pathData[0]; d0 += dist(last.x, last.y);
-        for (let i = 1; i < pathData.length; i++) {
-          let p = pathData[i];
-          let d = dist(p.x - last.x, p.y - last.y);
-          if (p.f === 1) d1 += d; else if (p.f === 2) d2 += d; else d0 += d;
-          last = p; cnt++;
-        }
+      let last = {x:0, y:0}; // Start from Origin
+
+      for (let i = 0; i < pathData.length; i++) {
+        let p = pathData[i];
+        let d = dist(p.x - last.x, p.y - last.y);
+        if (p.f === 1) d1 += d; else if (p.f === 2) d2 += d; else d0 += d;
+        last = p; cnt++;
       }
+
       document.getElementById('res_dist').innerText = ((d1 + d2 + d0) / 1000).toFixed(2) + " m";
       const vW = getVal('spd_w'), vJ = getVal('spd_j');
       const totalT = (vW>0?d1/vW:0) + (vJ>0?(d2+d0)/vJ:0) + (cnt * getVal('t_acc'));
@@ -556,26 +415,30 @@
       document.getElementById('res_time').innerText = `${m}:${s.toString().padStart(2, '0')}`;
       document.getElementById('res_time_s').innerText = totalT.toFixed(2) + " s";
       document.getElementById('res_segs').innerText = cnt;
-      document.getElementById('det_f1').innerText = `${(d1 / 1000).toFixed(2)}m`;
-      document.getElementById('det_f2').innerText = `${(d2 / 1000).toFixed(2)}m`;
-      document.getElementById('det_f0').innerText = `${(d0 / 1000).toFixed(2)}m`;
+      document.getElementById('det_f1').innerText = `${(d1/1000).toFixed(2)}m`;
+      document.getElementById('det_f2').innerText = `${(d2/1000).toFixed(2)}m`;
+      document.getElementById('det_f0').innerText = `${(d0/1000).toFixed(2)}m`;
     }
 
     function dlCSV() {
       let txt = "X,Y,Flag\n";
-      pathData.forEach(p => txt += `${(p.x ?? 0).toFixed(3)},${(p.y ?? 0).toFixed(3)},${(p.f ?? 0)}\n`);
+      // Ensure starting point is included or implied
+      txt += "0.000,0.000,0\n";
+      pathData.forEach(p => txt += `${p.x.toFixed(3)},${p.y.toFixed(3)},${p.f}\n`);
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv' })); a.download = 'path_data.csv'; a.click();
     }
+
     function dlSVG() {
-      let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
-      if(pathData.length===0){ minX=-100; maxX=100; minY=-100; maxY=100; }
-      else{ pathData.forEach(p=>{ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y; }); }
-      const pad=10, vb=`${minX-pad} ${minY-pad} ${(maxX-minX)+pad*2} ${(maxY-minY)+pad*2}`;
+      // 簡單匯出 SVG，加上 ViewBox
       const content = document.getElementById('layer-draw').innerHTML;
+      // 估算邊界
+      const dia = getVal('w_dia')*25.4 + 20;
+      const vb = `-${dia/2} -${dia/2} ${dia} ${dia}`;
       const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}">${content}</svg>`;
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([svgStr], { type: 'image/svg+xml' })); a.download = 'preview.svg'; a.click();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([svgStr], { type: 'image/svg+xml' })); a.download = 'path_preview.svg'; a.click();
     }
 
+    // --- Helpers ---
     function mkGrp(p) { const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); p.appendChild(g); return g; }
     function addLn(p, x1, y1, x2, y2, c, w, d) { const l = document.createElementNS("http://www.w3.org/2000/svg", "line"); l.setAttribute("x1", x1); l.setAttribute("y1", y1); l.setAttribute("x2", x2); l.setAttribute("y2", y2); l.setAttribute("stroke", c); l.setAttribute("stroke-width", w); if (d) l.setAttribute("stroke-dasharray", d); p.appendChild(l); }
     function addCir(p, x, y, r, f, s, w, d) { const c = document.createElementNS("http://www.w3.org/2000/svg", "circle"); c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", r); c.setAttribute("fill", f); if (s) c.setAttribute("stroke", s); if (w) c.setAttribute("stroke-width", w); if (d) c.setAttribute("stroke-dasharray", d); p.appendChild(c); }
